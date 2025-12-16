@@ -1,0 +1,21 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Swift sources
+*.swift text diff=swift
+
+# Plists and configs
+*.plist binary
+*.entitlements text
+*.yml text
+*.yaml text
+*.json text
+
+# Documentation
+*.md text diff=markdown
+
+# Shell scripts
+*.sh text eol=lf
+
+# Ignore generated files in diffs
+Package.resolved linguist-generated

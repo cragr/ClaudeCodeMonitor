@@ -1,0 +1,48 @@
+import Foundation
+import SwiftUI
+
+@MainActor
+class SettingsManager: ObservableObject {
+    @AppStorage("prometheusBaseURL") var prometheusBaseURLString: String = "http://localhost:9090"
+    @AppStorage("refreshInterval") var refreshInterval: Double = 30.0
+    @AppStorage("defaultTimeRange") var defaultTimeRangeRaw: String = TimeRangePreset.last15Minutes.rawValue
+    @AppStorage("terminalTypeFilter") var terminalTypeFilter: String = ""
+    @AppStorage("modelFilter") var modelFilter: String = ""
+    @AppStorage("appVersionFilter") var appVersionFilter: String = ""
+    @AppStorage("showMenuBarCost") var showMenuBarCost: Bool = true
+    @AppStorage("showMenuBarTokens") var showMenuBarTokens: Bool = true
+
+    var prometheusURL: URL? {
+        URL(string: prometheusBaseURLString)
+    }
+
+    var defaultTimeRange: TimeRangePreset {
+        get { TimeRangePreset(rawValue: defaultTimeRangeRaw) ?? .last15Minutes }
+        set { defaultTimeRangeRaw = newValue.rawValue }
+    }
+
+    var activeFilters: [String: String] {
+        var filters: [String: String] = [:]
+        if !terminalTypeFilter.isEmpty {
+            filters["terminal_type"] = terminalTypeFilter
+        }
+        if !modelFilter.isEmpty {
+            filters["model"] = modelFilter
+        }
+        if !appVersionFilter.isEmpty {
+            filters["app_version"] = appVersionFilter
+        }
+        return filters
+    }
+
+    func resetToDefaults() {
+        prometheusBaseURLString = "http://localhost:9090"
+        refreshInterval = 30.0
+        defaultTimeRangeRaw = TimeRangePreset.last15Minutes.rawValue
+        terminalTypeFilter = ""
+        modelFilter = ""
+        appVersionFilter = ""
+        showMenuBarCost = true
+        showMenuBarTokens = true
+    }
+}
