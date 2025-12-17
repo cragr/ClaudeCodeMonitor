@@ -9,7 +9,9 @@ Claude Code Monitor is a native macOS SwiftUI application for monitoring Claude 
 ## Repository Structure
 
 - `macos-app/` - Native macOS SwiftUI application
-- `monitoring-stack/` - Docker Compose with Prometheus, Grafana, and OTel collector
+- `docker-compose.yml` - Docker Compose configuration for Prometheus and OTel collector
+- `prometheus.yml` - Prometheus scrape configuration
+- `otel-collector-config.yaml` - OpenTelemetry collector configuration
 
 ## Build Commands
 
@@ -53,7 +55,7 @@ In Xcode: Open `macos-app/Package.swift` directly, then ⌘R to run, ⌘U to tes
 
 - macOS 14.0+ (Sonoma)
 - Swift 5.9 / Xcode 15+
-- Docker for running Prometheus stack (see `monitoring-stack/docker-compose.yml`)
+- Docker for running Prometheus stack (see `docker-compose.yml`)
 
 ## Prometheus Metric Names
 

@@ -10,10 +10,15 @@ A native macOS application for monitoring Claude Code usage via Prometheus telem
   <img src="images/img1.png" alt="Claude Code Monitor Screenshot" width="800">
 </p>
 
+<p align="center">
+  <img src="images/img2.png" alt="Claude Code Monitor Screenshot" width="800">
+</p>
+
 ## Features
 
-- **Live Dashboard**: Real-time metrics with auto-refresh (configurable interval)
-- **Historical Dashboard**: View metrics over custom time ranges (5m to 30 days)
+- **Summary Dashboard**: Real-time KPIs with cost rate and model breakdown charts
+- **Performance Dashboard**: Token metrics by model and type (input/output/cache)
+- **Historical Dashboard**: View metrics over custom time ranges with independent time selector
 - **KPI Cards**: Tokens, Cost, Active Time, Sessions, Lines Added/Removed, Commits, PRs
 - **Charts**: Token rate, cost rate, model breakdown (using Apple Charts)
 - **Menu Bar Mode**: Quick glance at current metrics without opening the full app
@@ -34,19 +39,18 @@ cd ClaudeCodeMonitor
 Start the OpenTelemetry Collector and Prometheus using Podman (or Docker):
 
 ```bash
-podman compose --file ./monitoring-stack/docker-compose.yml up -d
+podman compose up -d
 ```
 
 Or with Docker:
 
 ```bash
-docker compose --file ./monitoring-stack/docker-compose.yml up -d
+docker compose up -d
 ```
 
 This starts:
 - **OpenTelemetry Collector** (ports 4317/gRPC, 4318/HTTP, 8889/metrics)
 - **Prometheus** (port 9090)
-- **Grafana** (port 3000, optional)
 
 ### 3. Configure Environment Variables
 
@@ -101,17 +105,11 @@ Use Claude Code normally - metrics will be automatically sent to the monitoring 
 
 ### 7. Install and Run the Monitor App
 
-1. Download the latest `ClaudeCodeMonitor.dmg` or `ClaudeCodeMonitor.zip` from the [Releases](https://github.com/cragr/ClaudeCodeMonitor/releases) page
+1. Download the latest `ClaudeCodeMonitor.dmg` from the [Releases](https://github.com/cragr/ClaudeCodeMonitor/releases) page
 
-2. If using DMG: Open and drag `ClaudeCodeMonitor.app` to your Applications folder
-   If using ZIP: Extract and move `ClaudeCodeMonitor.app` to Applications
+2. Open and drag `ClaudeCodeMonitor.app` to your Applications folder
 
-3. Remove the quarantine attribute (required for unsigned apps):
-   ```bash
-   xattr -cr /Applications/ClaudeCodeMonitor.app
-   ```
-
-4. Launch the app from Applications
+3. Launch the app from Applications
 
 The app will connect to Prometheus and display your Claude Code usage metrics.
 
@@ -123,23 +121,28 @@ The app will connect to Prometheus and display your Claude Code usage metrics.
 4. All tests should pass (green checkmarks)
 
 If metrics aren't showing:
-- Ensure the monitoring stack is running: `podman compose --file ./monitoring-stack/docker-compose.yml ps`
+- Ensure the monitoring stack is running: `podman compose ps`
 - Check Prometheus targets: http://localhost:9090/targets
 - Use Claude Code to generate some metrics
 - Wait a few minutes for metrics to be scraped
 
 ## Usage
 
-### Live Dashboard
-- Shows metrics for the selected time range
+### Summary Dashboard
+- Shows KPIs for the selected time range (15m, 1h, 12h, 1d, 1w, 2w, 1mo)
 - Auto-refreshes based on configured interval
-- Select time range from the dropdown (Last 5m to Last 30 days)
-- Displays KPI cards and live charts
+- Displays cost rate over time and cost breakdown by model
+- Shows tokens, cost, active time, sessions, lines of code, commits, PRs
+
+### Performance Dashboard
+- Token usage time series with breakdown by model and type
+- Token types: input, output, cacheRead, cacheCreation
+- Detailed token metrics with charts
 
 ### Historical Dashboard
-- Select preset time ranges or custom dates
-- View trends and aggregated statistics
-- Compare usage across different periods
+- Independent time selector from global toolbar
+- Usage overview with stats equivalent to `claude /stats` command
+- Usage trends charts and productivity metrics
 
 ### Menu Bar
 - Click the chart icon in the menu bar for quick stats
@@ -175,7 +178,7 @@ If metrics aren't showing:
 ## Troubleshooting
 
 ### "Not Connected" Error
-1. Check if Prometheus is running: `podman compose --file ./monitoring-stack/docker-compose.yml ps`
+1. Check if Prometheus is running: `podman compose ps`
 2. Verify Prometheus URL in Settings (default: http://localhost:9090)
 3. Test connection in Settings → Connection → Test Connection
 
