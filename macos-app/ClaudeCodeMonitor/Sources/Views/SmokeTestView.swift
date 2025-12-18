@@ -5,6 +5,8 @@ struct SmokeTestView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var isRunningTest = false
     @State private var testResults: [TestResult] = []
+    @State private var appearAnimation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     struct TestResult: Identifiable {
         let id = UUID()
@@ -19,120 +21,222 @@ struct SmokeTestView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            header
+        ScrollView {
+            VStack(spacing: Spacing.xl) {
+                // Header
+                headerSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 10)
 
-            Divider()
-
-            // Results
-            ScrollView {
-                VStack(spacing: 16) {
-                    if testResults.isEmpty && !isRunningTest {
-                        emptyState
-                    } else {
-                        testResultsList
-                    }
-
-                    if !metricsService.discoveredMetrics.isEmpty {
-                        discoveredMetricsSection
-                    }
-
-                    nextStepsSection
+                // Results
+                if testResults.isEmpty && !isRunningTest {
+                    emptyState
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(y: appearAnimation ? 0 : 15)
+                } else {
+                    testResultsList
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(y: appearAnimation ? 0 : 15)
                 }
-                .padding()
+
+                if !metricsService.discoveredMetrics.isEmpty {
+                    discoveredMetricsSection
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(y: appearAnimation ? 0 : 20)
+                }
+
+                nextStepsSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 25)
             }
+            .padding(Spacing.xl)
         }
         .frame(minWidth: 600, minHeight: 500)
+        .background(Color.noirBackground)
+        .onAppear {
+            withAnimation(reduceMotion ? .none : .easeOut(duration: 0.5)) {
+                appearAnimation = true
+            }
+        }
     }
 
-    // MARK: - Header
+    // MARK: - Header Section
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading) {
+    private var headerSection: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.sm) {
+                    Circle()
+                        .fill(Color.phosphorAmber)
+                        .frame(width: 8, height: 8)
+                        .phosphorGlow(.phosphorAmber, intensity: 0.6, isActive: true)
+
+                    Text("DIAGNOSTICS")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextSecondary)
+                        .tracking(2)
+                }
+
                 Text("Connectivity & Smoke Test")
-                    .font(.title2.bold())
+                    .font(.terminalHeadline)
+                    .foregroundStyle(Color.noirTextPrimary)
+
                 Text("Validate Prometheus connection and discover Claude Code metrics")
-                    .foregroundStyle(.secondary)
+                    .font(.terminalBodySmall)
+                    .foregroundStyle(Color.noirTextTertiary)
             }
 
             Spacer()
 
             Button(action: runSmokeTest) {
-                Label(isRunningTest ? "Running..." : "Run Tests", systemImage: "play.fill")
+                HStack(spacing: Spacing.sm) {
+                    if isRunningTest {
+                        TerminalLoadingIndicator(color: .phosphorAmber)
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 11))
+                    }
+                    Text(isRunningTest ? "RUNNING..." : "RUN TESTS")
+                        .font(.terminalCaptionSmall)
+                        .tracking(1)
+                }
+                .foregroundStyle(Color.noirBackground)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.sm)
+                .background {
+                    Capsule()
+                        .fill(Color.phosphorAmber)
+                }
+                .phosphorGlow(.phosphorAmber, intensity: 0.4, isActive: !isRunningTest)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
             .disabled(isRunningTest)
         }
-        .padding()
-        .background(.bar)
+        .padding(Spacing.lg)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.phosphorAmber.opacity(0.06), .clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Empty State
 
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Test Results", systemImage: "checkmark.shield")
-        } description: {
-            Text("Click 'Run Tests' to validate your Prometheus connection and discover available metrics")
-        } actions: {
-            Button("Run Tests", action: runSmokeTest)
-                .buttonStyle(.borderedProminent)
+        VStack(spacing: Spacing.lg) {
+            Image(systemName: "checkmark.shield")
+                .font(.system(size: 40, weight: .thin))
+                .foregroundStyle(Color.phosphorAmber)
+                .phosphorGlow(.phosphorAmber, intensity: 0.4, isActive: true)
+
+            VStack(spacing: Spacing.sm) {
+                Text("NO TEST RESULTS")
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextPrimary)
+                    .tracking(2)
+
+                Text("Click 'Run Tests' to validate your Prometheus\nconnection and discover available metrics")
+                    .font(.terminalBodySmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button(action: runSmokeTest) {
+                Text("RUN TESTS")
+                    .font(.terminalCaptionSmall)
+                    .tracking(1)
+            }
+            .buttonStyle(TerminalButtonStyle(color: .phosphorAmber, isProminent: true))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Spacing.xxl)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
         }
     }
 
     // MARK: - Test Results List
 
     private var testResultsList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Test Results")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            TerminalSectionHeader("Test Results")
 
-            ForEach(testResults) { result in
-                TestResultRow(result: result)
+            VStack(spacing: Spacing.sm) {
+                ForEach(testResults) { result in
+                    TerminalTestResultRow(result: result)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Discovered Metrics
 
     private var discoveredMetricsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text("Discovered Claude Metrics")
-                    .font(.headline)
-                Text("(\(metricsService.discoveredMetrics.count))")
-                    .foregroundStyle(.secondary)
+                TerminalSectionHeader("Discovered Metrics")
+                Spacer()
+                Text("\(metricsService.discoveredMetrics.count)")
+                    .font(.terminalDataSmall)
+                    .foregroundStyle(Color.phosphorCyan)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xxs)
+                    .background {
+                        Capsule()
+                            .fill(Color.phosphorCyan.opacity(0.15))
+                    }
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Spacing.sm) {
                 ForEach(metricsService.discoveredMetrics, id: \.self) { metric in
-                    MetricRow(name: metric)
+                    TerminalMetricRow(name: metric)
                 }
             }
         }
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(Spacing.lg)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Next Steps
 
     private var nextStepsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Setup Guide")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            TerminalSectionHeader("Setup Guide")
 
-            VStack(alignment: .leading, spacing: 16) {
-                SetupStep(
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                TerminalSetupStep(
                     number: 1,
                     title: "Start the monitoring stack",
                     code: "docker-compose up -d"
                 )
 
-                SetupStep(
+                TerminalSetupStep(
                     number: 2,
                     title: "Enable Claude Code telemetry",
                     code: """
@@ -143,22 +247,28 @@ struct SmokeTestView: View {
                     """
                 )
 
-                SetupStep(
+                TerminalSetupStep(
                     number: 3,
                     title: "Use Claude Code normally",
                     code: "claude"
                 )
 
-                SetupStep(
+                TerminalSetupStep(
                     number: 4,
                     title: "Verify metrics in Prometheus",
                     code: "open http://localhost:9090/graph"
                 )
             }
         }
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(Spacing.lg)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Actions
@@ -277,37 +387,53 @@ struct SmokeTestView: View {
     }
 }
 
-// MARK: - Test Result Row
+// MARK: - Terminal Test Result Row
 
-struct TestResultRow: View {
+struct TerminalTestResultRow: View {
     let result: SmokeTestView.TestResult
+    @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             Image(systemName: iconName)
-                .foregroundStyle(iconColor)
-                .font(.title3)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(statusColor)
                 .frame(width: 24)
+                .phosphorGlow(statusColor, intensity: 0.5, isActive: result.status == .passed)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(result.name)
-                    .font(.headline)
+                    .font(.terminalTitle)
+                    .foregroundStyle(Color.noirTextPrimary)
                 Text(result.message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .lineLimit(2)
             }
 
             Spacer()
 
             if let duration = result.duration {
                 Text(String(format: "%.0fms", duration * 1000))
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.tertiary)
+                    .font(.terminalDataSmall)
+                    .foregroundStyle(Color.noirTextTertiary)
             }
         }
-        .padding()
-        .background(backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(Spacing.md)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                .fill(statusColor.opacity(isHovered ? 0.15 : 0.08))
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .strokeBorder(statusColor.opacity(0.25), lineWidth: 1)
+                }
+        }
+        .onHover { hovering in
+            withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
     }
 
     private var iconName: String {
@@ -319,62 +445,66 @@ struct TestResultRow: View {
         }
     }
 
-    private var iconColor: Color {
+    private var statusColor: Color {
         switch result.status {
-        case .passed: return .green
-        case .failed: return .red
-        case .warning: return .orange
-        case .pending: return .gray
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch result.status {
-        case .passed: return .green.opacity(0.1)
-        case .failed: return .red.opacity(0.1)
-        case .warning: return .orange.opacity(0.1)
-        case .pending: return .gray.opacity(0.1)
+        case .passed: return .phosphorGreen
+        case .failed: return .phosphorRed
+        case .warning: return .phosphorAmber
+        case .pending: return .noirTextTertiary
         }
     }
 }
 
-// MARK: - Metric Row
+// MARK: - Terminal Metric Row
 
-struct MetricRow: View {
+struct TerminalMetricRow: View {
     let name: String
     @State private var isHovered = false
     @State private var showCopied = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: "chart.line.uptrend.xyaxis")
-                .foregroundStyle(.blue)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.phosphorCyan)
+                .phosphorGlow(.phosphorCyan, intensity: 0.3, isActive: isHovered)
+
             Text(name)
-                .font(.system(.caption, design: .monospaced))
+                .font(.terminalDataSmall)
+                .foregroundStyle(Color.noirTextSecondary)
                 .textSelection(.enabled)
+                .lineLimit(1)
+
             Spacer()
 
             if showCopied {
-                Text("Copied!")
-                    .font(.caption2)
-                    .foregroundStyle(.green)
+                Text("COPIED")
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.phosphorGreen)
                     .transition(.opacity.combined(with: .scale))
             } else if isHovered {
                 Button(action: copyToClipboard) {
                     Image(systemName: "doc.on.doc")
-                        .font(.caption)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.noirTextTertiary)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
                 .transition(.opacity)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isHovered ? Color.blue.opacity(0.1) : Color(NSColor.tertiarySystemFill))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                .fill(isHovered ? Color.phosphorCyan.opacity(0.08) : Color.noirBackground.opacity(0.5))
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                        .strokeBorder(isHovered ? Color.phosphorCyan.opacity(0.3) : Color.noirStroke, lineWidth: 1)
+                }
+        }
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.15)) {
                 isHovered = hovering
             }
         }
@@ -403,33 +533,42 @@ struct MetricRow: View {
     }
 }
 
-// MARK: - Setup Step
+// MARK: - Terminal Setup Step
 
-struct SetupStep: View {
+struct TerminalSetupStep: View {
     let number: Int
     let title: String
     let code: String
 
     @State private var isHovered = false
     @State private var showCopied = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("\(number).")
-                    .font(.headline)
-                    .foregroundStyle(.blue)
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.sm) {
+                Text("\(number)")
+                    .font(.terminalDataSmall)
+                    .foregroundStyle(Color.noirBackground)
+                    .frame(width: 18, height: 18)
+                    .background {
+                        Circle()
+                            .fill(Color.phosphorCyan)
+                    }
+                    .phosphorGlow(.phosphorCyan, intensity: 0.3, isActive: true)
+
                 Text(title)
-                    .font(.subheadline)
-                    .textSelection(.enabled)
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextSecondary)
             }
 
             HStack(spacing: 0) {
-                // Code block with selectable text
+                // Code block
                 Text(code)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(.terminalDataSmall)
+                    .foregroundStyle(Color.phosphorGreen)
                     .textSelection(.enabled)
-                    .padding(10)
+                    .padding(Spacing.md)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Copy button
@@ -438,13 +577,13 @@ struct SetupStep: View {
                         Group {
                             if showCopied {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(Color.phosphorGreen)
                             } else {
                                 Image(systemName: "doc.on.doc")
-                                    .foregroundStyle(isHovered ? .white : .gray)
+                                    .foregroundStyle(isHovered ? Color.phosphorGreen : Color.noirTextTertiary)
                             }
                         }
-                        .font(.caption)
+                        .font(.system(size: 11))
                         .frame(width: 20, height: 20)
                     }
                     .buttonStyle(.plain)
@@ -452,17 +591,18 @@ struct SetupStep: View {
 
                     Spacer()
                 }
-                .padding(8)
+                .padding(Spacing.sm)
             }
-            .background(.black.opacity(0.85))
-            .foregroundStyle(.green)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isHovered ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
-            )
+            .background {
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .fill(Color.noirBackground)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                            .strokeBorder(isHovered ? Color.phosphorGreen.opacity(0.4) : Color.noirStroke, lineWidth: 1)
+                    }
+            }
             .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.15)) {
+                withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.15)) {
                     isHovered = hovering
                 }
             }
@@ -512,7 +652,6 @@ struct SetupStep: View {
     }
 
     private func copyAllLines() {
-        // Format as shell script with shebang
         let script = "#!/bin/bash\n\n" + code
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(script, forType: .string)
@@ -524,6 +663,34 @@ struct SetupStep: View {
                 showCopied = false
             }
         }
+    }
+}
+
+// MARK: - Legacy Components (kept for compatibility)
+
+struct TestResultRow: View {
+    let result: SmokeTestView.TestResult
+
+    var body: some View {
+        TerminalTestResultRow(result: result)
+    }
+}
+
+struct MetricRow: View {
+    let name: String
+
+    var body: some View {
+        TerminalMetricRow(name: name)
+    }
+}
+
+struct SetupStep: View {
+    let number: Int
+    let title: String
+    let code: String
+
+    var body: some View {
+        TerminalSetupStep(number: number, title: title, code: code)
     }
 }
 

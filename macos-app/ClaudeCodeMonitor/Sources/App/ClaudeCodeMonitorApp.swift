@@ -6,6 +6,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Ensure the app appears in the dock and has a menu bar
         NSApp.setActivationPolicy(.regular)
+
+        // Set dark appearance and cyan accent for the app
+        NSApp.appearance = NSAppearance(named: .darkAqua)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -34,7 +37,8 @@ struct ClaudeCodeMonitorApp: App {
                 .environmentObject(settingsManager)
                 .environmentObject(metricsService)
         }
-        .windowStyle(.automatic)
+        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified(showsTitle: false))
         .windowResizability(.contentMinSize)
         .commands {
             // Add standard app menu commands

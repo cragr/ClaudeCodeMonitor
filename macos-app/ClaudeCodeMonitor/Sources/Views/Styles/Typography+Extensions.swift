@@ -1,6 +1,7 @@
 import SwiftUI
 
-// MARK: - Spacing System (8-point grid)
+// MARK: - Legacy Spacing System (8-point grid)
+// Kept for backward compatibility with existing views
 
 extension CGFloat {
     static let spacingXS: CGFloat = 4
@@ -20,11 +21,11 @@ extension CGFloat {
     static let chartHeightExpanded: CGFloat = 280
 }
 
-// MARK: - Typography Scale
-// Consistent font scaling following Apple HIG
+// MARK: - Legacy Typography Scale
+// Kept for backward compatibility - prefer DesignSystem fonts for new code
 
 extension Font {
-    // Dashboard specific fonts
+    // Dashboard specific fonts (legacy)
     static let dashboardTitle = Font.system(.largeTitle, design: .rounded, weight: .semibold)
     static let sectionTitle = Font.system(.title2, design: .default, weight: .semibold)
     static let metricValue = Font.system(.title2, design: .rounded, weight: .medium)
@@ -34,29 +35,29 @@ extension Font {
     static let cardSubtitle = Font.caption.weight(.medium)
 }
 
-// MARK: - Custom GroupBox Styles
+// MARK: - Terminal Noir GroupBox Styles
 
 struct CardGroupBoxStyle: GroupBoxStyle {
     var isHovered: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: .spacingMD) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             configuration.label
             configuration.content
         }
-        .padding(.spacingLG)
+        .padding(Spacing.lg)
         .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.regularMaterial)
+            RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                .fill(Color.noirSurface)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isHovered ? Color.accentColor.opacity(0.05) : .clear)
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .fill(isHovered ? Color.phosphorCyan.opacity(0.05) : .clear)
                 }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(isHovered ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.2), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                .strokeBorder(isHovered ? Color.phosphorCyan.opacity(0.3) : Color.noirStroke, lineWidth: 1)
         )
         .animation(reduceMotion ? .none : .easeInOut(duration: 0.15), value: isHovered)
     }
@@ -64,16 +65,20 @@ struct CardGroupBoxStyle: GroupBoxStyle {
 
 struct ChartGroupBoxStyle: GroupBoxStyle {
     func makeBody(configuration: Configuration) -> some View {
-        VStack(alignment: .leading, spacing: .spacingLG) {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
             configuration.label
-                .font(.chartTitle)
+                .font(.terminalTitle)
+                .foregroundStyle(Color.noirTextSecondary)
             configuration.content
         }
-        .padding(.spacingXL)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(Spacing.xl)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.quaternary, lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
         )
     }
 }
@@ -83,11 +88,11 @@ struct ChartGroupBoxStyle: GroupBoxStyle {
 struct HoverEffectModifier: ViewModifier {
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var highlightColor: Color = .accentColor
+    var highlightColor: Color = .phosphorCyan
 
     func body(content: Content) -> some View {
         content
-            .background(isHovered ? highlightColor.opacity(0.05) : .clear)
+            .background(isHovered ? highlightColor.opacity(0.08) : .clear)
             .animation(reduceMotion ? .none : .easeInOut(duration: 0.15), value: isHovered)
             .onHover { hovering in
                 isHovered = hovering
@@ -96,69 +101,49 @@ struct HoverEffectModifier: ViewModifier {
 }
 
 extension View {
-    func hoverHighlight(color: Color = .accentColor) -> some View {
+    func hoverHighlight(color: Color = .phosphorCyan) -> some View {
         modifier(HoverEffectModifier(highlightColor: color))
     }
 }
 
-// MARK: - Color Extensions
+// MARK: - Legacy Color Extensions
+// Maps legacy colors to Terminal Noir phosphor palette
 
 extension Color {
-    static let metricGreen = Color.green
-    static let metricBlue = Color.blue
-    static let metricOrange = Color.orange
-    static let metricPurple = Color.purple
-    static let metricMint = Color.mint
-    static let metricRed = Color.red
-    static let metricIndigo = Color.indigo
-    static let metricTeal = Color.teal
+    static let metricGreen = Color.phosphorGreen
+    static let metricBlue = Color.phosphorCyan
+    static let metricOrange = Color.phosphorOrange
+    static let metricPurple = Color.phosphorPurple
+    static let metricMint = Color.phosphorCyan.opacity(0.7)
+    static let metricRed = Color.phosphorRed
+    static let metricIndigo = Color.phosphorPurple.opacity(0.8)
+    static let metricTeal = Color.phosphorCyan.opacity(0.8)
 }
 
-// MARK: - Connection Status Badge
-
-struct ConnectionStatusBadge: View {
-    let status: ConnectionStatus
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: status.icon)
-                .font(.caption)
-                .symbolEffect(.pulse, isActive: !reduceMotion && status == .connecting)
-                .foregroundStyle(status.color)
-
-            Text(status.displayText)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, .spacingSM)
-        .padding(.vertical, .spacingXS)
-        .background(status.color.opacity(0.1))
-        .clipShape(Capsule())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Connection status: \(status.displayText)")
-    }
-}
+// MARK: - Connection Status Extensions
 
 extension ConnectionStatus {
     var icon: String {
         switch self {
         case .connected: return "circle.fill"
         case .connecting: return "circle.dotted"
-        case .disconnected, .unknown: return "circle.slash"
+        case .disconnected: return "circle.slash"
+        case .unknown: return "circle.slash"
         }
     }
 
     var color: Color {
         switch self {
-        case .connected: return .green
-        case .connecting: return .orange
-        case .disconnected, .unknown: return .red
+        case .connected: return .phosphorGreen
+        case .connecting: return .phosphorAmber
+        case .disconnected: return .phosphorRed
+        case .unknown: return .phosphorRed
         }
     }
 }
 
-// MARK: - Empty State Component
+// MARK: - Legacy Empty State Component
+// Prefer TerminalEmptyState from DesignSystem for new code
 
 struct MetricEmptyState: View {
     let title: String
@@ -168,17 +153,13 @@ struct MetricEmptyState: View {
     var actionLabel: String? = nil
 
     var body: some View {
-        ContentUnavailableView {
-            Label(title, systemImage: icon)
-        } description: {
-            Text(message)
-        } actions: {
-            if let action = action, let label = actionLabel {
-                Button(label, action: action)
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-            }
-        }
+        TerminalEmptyState(
+            title: title,
+            message: message,
+            icon: icon,
+            action: action,
+            actionLabel: actionLabel
+        )
         .frame(minHeight: .chartHeightCompact)
     }
 }
