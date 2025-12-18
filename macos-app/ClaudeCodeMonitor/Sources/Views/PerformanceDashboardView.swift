@@ -2,34 +2,49 @@ import SwiftUI
 import Charts
 
 // MARK: - Performance Dashboard View (Tab 2)
-// Per spec: Total tokens time series, Tokens by model, Tokens by type,
-// Compact breakdown of input/output/cacheRead/cacheCreation
+// Token metrics with Terminal Noir aesthetic
 
 struct PerformanceDashboardView: View {
     @ObservedObject var metricsService: MetricsService
+    @State private var appearAnimation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: Spacing.xl) {
                 tokenBreakdownSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 10)
+
                 tokenTimeSeriesSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 15)
+
                 tokensByModelSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 20)
+
                 tokensByTypeSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 25)
             }
-            .padding()
+            .padding(Spacing.xl)
         }
         .frame(minWidth: 600, minHeight: 500)
+        .background(Color.noirBackground)
         .overlay {
-            if metricsService.isLoading {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.ultraThinMaterial)
+            if metricsService.isLoading && !metricsService.connectionStatus.isConnected {
+                loadingOverlay
             }
         }
         .overlay {
-            if !metricsService.connectionStatus.isConnected {
+            if !metricsService.connectionStatus.isConnected && !metricsService.isLoading {
                 disconnectedOverlay
+            }
+        }
+        .onAppear {
+            withAnimation(reduceMotion ? .none : .easeOut(duration: 0.6)) {
+                appearAnimation = true
             }
         }
     }
@@ -37,125 +52,245 @@ struct PerformanceDashboardView: View {
     // MARK: - Token Breakdown Section (Compact summary)
 
     private var tokenBreakdownSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Token Breakdown")
-                    .font(.title2.bold())
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            // Header with total
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    HStack(spacing: Spacing.sm) {
+                        Circle()
+                            .fill(Color.phosphorCyan)
+                            .frame(width: 8, height: 8)
+                            .phosphorGlow(.phosphorCyan, intensity: 0.6, isActive: true)
+
+                        Text("TOKEN BREAKDOWN")
+                            .font(.terminalCaptionSmall)
+                            .foregroundStyle(Color.noirTextSecondary)
+                            .tracking(2)
+                    }
+
+                    Text(metricsService.dashboardData.formattedTokens)
+                        .font(.terminalDisplayMedium)
+                        .foregroundStyle(Color.noirTextPrimary)
+                        .phosphorGlow(.phosphorCyan, intensity: 0.3, isActive: true)
+                        .contentTransition(.numericText())
+                }
+
                 Spacer()
-                Text("Total: \(metricsService.dashboardData.formattedTokens)")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+
+                Text(metricsService.currentTimeRange.displayName)
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextTertiary)
+            }
+            .padding(Spacing.lg)
+            .background {
+                RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                    .fill(Color.noirSurface)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.phosphorCyan.opacity(0.06), .clear],
+                                    startPoint: .top,
+                                    endPoint: .center
+                                )
+                            )
+                    }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                    .strokeBorder(Color.noirStroke, lineWidth: 1)
             }
 
-            HStack(spacing: 16) {
-                TokenTypeCard(
+            // Token type cards
+            HStack(spacing: Spacing.md) {
+                TerminalTokenTypeCard(
                     type: "Input",
                     value: metricsService.dashboardData.tokensByType["input"] ?? 0,
-                    color: .blue,
-                    icon: "arrow.right.circle.fill"
+                    color: .phosphorCyan,
+                    icon: "arrow.right.circle.fill",
+                    totalTokens: totalTokens
                 )
 
-                TokenTypeCard(
+                TerminalTokenTypeCard(
                     type: "Output",
                     value: metricsService.dashboardData.tokensByType["output"] ?? 0,
-                    color: .green,
-                    icon: "arrow.left.circle.fill"
+                    color: .phosphorGreen,
+                    icon: "arrow.left.circle.fill",
+                    totalTokens: totalTokens
                 )
 
-                TokenTypeCard(
+                TerminalTokenTypeCard(
                     type: "Cache Read",
                     value: metricsService.dashboardData.tokensByType["cacheRead"] ?? 0,
-                    color: .orange,
-                    icon: "arrow.triangle.2.circlepath.circle.fill"
+                    color: .phosphorOrange,
+                    icon: "arrow.triangle.2.circlepath.circle.fill",
+                    totalTokens: totalTokens
                 )
 
-                TokenTypeCard(
-                    type: "Cache Creation",
+                TerminalTokenTypeCard(
+                    type: "Cache Create",
                     value: metricsService.dashboardData.tokensByType["cacheCreation"] ?? 0,
-                    color: .purple,
-                    icon: "plus.circle.fill"
+                    color: .phosphorPurple,
+                    icon: "plus.circle.fill",
+                    totalTokens: totalTokens
                 )
             }
         }
+    }
+
+    private var totalTokens: Double {
+        let data = metricsService.dashboardData.tokensByType
+        let input: Double = data["input"] ?? 0
+        let output: Double = data["output"] ?? 0
+        let cacheRead: Double = data["cacheRead"] ?? 0
+        let cacheCreation: Double = data["cacheCreation"] ?? 0
+        return input + output + cacheRead + cacheCreation
     }
 
     // MARK: - Total Tokens Time Series
 
     private var tokenTimeSeriesSection: some View {
-        ModernChartCard(title: "Total Tokens Over Time") {
+        TerminalChartCard(
+            title: "Total Tokens Over Time",
+            subtitle: metricsService.currentTimeRange.displayName,
+            onExport: nil
+        ) {
             if metricsService.dashboardData.tokensSeries.isEmpty {
-                emptyChartPlaceholder
+                TerminalEmptyState(
+                    title: "No Data",
+                    message: "No token metrics available for this time range",
+                    icon: "chart.line.downtrend.xyaxis"
+                )
             } else {
-                Chart(metricsService.dashboardData.tokensSeries) { point in
-                    LineMark(
-                        x: .value("Time", point.timestamp),
-                        y: .value("Rate", point.value)
-                    )
-                    .foregroundStyle(.blue.gradient)
-
-                    AreaMark(
-                        x: .value("Time", point.timestamp),
-                        y: .value("Rate", point.value)
-                    )
-                    .foregroundStyle(.blue.opacity(0.1).gradient)
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic) { _ in
-                        AxisGridLine()
-                        AxisValueLabel(format: metricsService.currentTimeRange.bucketGranularity.chartDateFormat)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let val = value.as(Double.self) {
-                                Text(DashboardData.formatTokenCount(val))
-                            }
-                        }
-                    }
-                }
-                .frame(height: .chartHeightStandard)
+                TerminalLineChart(
+                    data: metricsService.dashboardData.tokensSeries,
+                    color: .phosphorCyan,
+                    valueFormatter: { DashboardData.formatTokenCount($0) }
+                )
             }
         }
     }
 
-    // MARK: - Tokens by Model (Stacked/Grouped)
+    // MARK: - Tokens by Model (Multi-line)
 
     private var tokensByModelSection: some View {
-        ModernChartCard(title: "Tokens by Model") {
+        TerminalChartCard(
+            title: "Tokens by Model",
+            subtitle: "comparison",
+            onExport: nil
+        ) {
             if metricsService.dashboardData.tokensByModelSeries.isEmpty {
-                emptyChartPlaceholder
+                TerminalEmptyState(
+                    title: "No Data",
+                    message: "No model breakdown available",
+                    icon: "cpu"
+                )
             } else {
                 Chart {
                     ForEach(metricsService.dashboardData.tokensByModelSeries) { modelSeries in
+                        let modelName = shortModelName(modelSeries.model)
                         ForEach(modelSeries.dataPoints) { point in
                             LineMark(
                                 x: .value("Time", point.timestamp),
-                                y: .value("Rate", point.value)
+                                y: .value("Tokens", point.value),
+                                series: .value("Model", modelName)
                             )
-                            .foregroundStyle(by: .value("Model", shortModelName(modelSeries.model)))
+                            .foregroundStyle(by: .value("Model", modelName))
+                            .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                            .interpolationMethod(.catmullRom)
                         }
                     }
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic) { _ in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel(format: metricsService.currentTimeRange.bucketGranularity.chartDateFormat)
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
                     }
                 }
-                .chartLegend(position: .bottom, alignment: .center)
-                .frame(height: .chartHeightStandard)
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
+                        AxisValueLabel()
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
+                    }
+                }
+                .chartForegroundStyleScale(modelColorMapping())
+                .chartLegend(position: .bottom, alignment: .center, spacing: Spacing.md)
+                .chartPlotStyle { content in
+                    content
+                        .background(Color.noirBackground.opacity(0.3))
+                }
+                .frame(height: 220)
             }
         }
     }
 
-    // MARK: - Tokens by Type (input/output/cacheRead/cacheCreation)
+    private func modelColorMapping() -> KeyValuePairs<String, Color> {
+        let modelNames = metricsService.dashboardData.tokensByModelSeries.map { shortModelName($0.model) }
+
+        // Build KeyValuePairs dynamically based on actual models
+        switch modelNames.count {
+        case 0:
+            return [:]
+        case 1:
+            return [modelNames[0]: modelColorPalette[0]]
+        case 2:
+            return [
+                modelNames[0]: modelColorPalette[0],
+                modelNames[1]: modelColorPalette[1]
+            ]
+        case 3:
+            return [
+                modelNames[0]: modelColorPalette[0],
+                modelNames[1]: modelColorPalette[1],
+                modelNames[2]: modelColorPalette[2]
+            ]
+        case 4:
+            return [
+                modelNames[0]: modelColorPalette[0],
+                modelNames[1]: modelColorPalette[1],
+                modelNames[2]: modelColorPalette[2],
+                modelNames[3]: modelColorPalette[3]
+            ]
+        case 5:
+            return [
+                modelNames[0]: modelColorPalette[0],
+                modelNames[1]: modelColorPalette[1],
+                modelNames[2]: modelColorPalette[2],
+                modelNames[3]: modelColorPalette[3],
+                modelNames[4]: modelColorPalette[4]
+            ]
+        default:
+            return [
+                modelNames[0]: modelColorPalette[0],
+                modelNames[1]: modelColorPalette[1],
+                modelNames[2]: modelColorPalette[2],
+                modelNames[3]: modelColorPalette[3],
+                modelNames[4]: modelColorPalette[4],
+                modelNames[5]: modelColorPalette[5]
+            ]
+        }
+    }
+
+    // MARK: - Tokens by Type (Stacked Area)
 
     private var tokensByTypeSection: some View {
-        ModernChartCard(title: "Tokens by Type") {
+        TerminalChartCard(
+            title: "Tokens by Type",
+            subtitle: "stacked view",
+            onExport: nil
+        ) {
             if metricsService.dashboardData.tokensByTypeSeries.isEmpty {
-                emptyChartPlaceholder
+                TerminalEmptyState(
+                    title: "No Data",
+                    message: "No token type breakdown available",
+                    icon: "square.stack.3d.up"
+                )
             } else {
                 Chart {
                     ForEach(metricsService.dashboardData.tokensByTypeSeries) { typeSeries in
@@ -170,66 +305,165 @@ struct PerformanceDashboardView: View {
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic) { _ in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel(format: metricsService.currentTimeRange.bucketGranularity.chartDateFormat)
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
+                        AxisValueLabel()
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
                     }
                 }
                 .chartLegend(position: .bottom, alignment: .center)
                 .chartForegroundStyleScale([
-                    "Input": Color.blue,
-                    "Output": Color.green,
-                    "Cache Read": Color.orange,
-                    "Cache Creation": Color.purple
+                    "Input": Color.phosphorCyan,
+                    "Output": Color.phosphorGreen,
+                    "Cache Read": Color.phosphorOrange,
+                    "Cache Creation": Color.phosphorPurple
                 ])
-                .frame(height: .chartHeightStandard)
+                .chartPlotStyle { content in
+                    content
+                        .background(Color.noirBackground.opacity(0.3))
+                }
+                .frame(height: 200)
             }
         }
+    }
+
+    // MARK: - Overlays
+
+    private var loadingOverlay: some View {
+        ZStack {
+            Color.noirBackground.opacity(0.8)
+
+            VStack(spacing: Spacing.lg) {
+                TerminalLoadingIndicator(color: .phosphorCyan)
+                    .scaleEffect(1.5)
+
+                Text("LOADING METRICS")
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .tracking(2)
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var disconnectedOverlay: some View {
+        ZStack {
+            Color.noirBackground.opacity(0.9)
+
+            VStack(spacing: Spacing.xl) {
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 40, weight: .thin))
+                    .foregroundStyle(Color.phosphorRed)
+                    .phosphorGlow(.phosphorRed, intensity: 0.5, isActive: true)
+
+                VStack(spacing: Spacing.sm) {
+                    Text("NOT CONNECTED")
+                        .font(.terminalCaption)
+                        .foregroundStyle(Color.noirTextPrimary)
+                        .tracking(2)
+
+                    Text(metricsService.errorMessage ?? "Unable to connect to Prometheus")
+                        .font(.terminalBodySmall)
+                        .foregroundStyle(Color.noirTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 300)
+                }
+
+                Button(action: { Task { await metricsService.checkConnection() } }) {
+                    Text("RETRY CONNECTION")
+                        .font(.terminalCaptionSmall)
+                        .tracking(1)
+                }
+                .buttonStyle(TerminalButtonStyle(color: .phosphorCyan, isProminent: true))
+            }
+        }
+        .ignoresSafeArea()
     }
 
     // MARK: - Helpers
 
-    private var emptyChartPlaceholder: some View {
-        ContentUnavailableView {
-            Label("No Data", systemImage: "chart.line.downtrend.xyaxis")
-        } description: {
-            Text("No token metrics available for this time range")
-        }
-        .frame(height: 150)
-    }
-
-    private var disconnectedOverlay: some View {
-        ContentUnavailableView {
-            Label("Not Connected", systemImage: "wifi.slash")
-        } description: {
-            Text(metricsService.errorMessage ?? "Unable to connect to Prometheus")
-        } actions: {
-            Button("Retry Connection") {
-                Task { await metricsService.checkConnection() }
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
-    }
-
     private func shortModelName(_ fullName: String) -> String {
-        if fullName.contains("opus") {
-            return "opus"
+        if fullName.contains("opus-4-5") || fullName.contains("opus-4.5") {
+            return "Opus 4.5"
+        } else if fullName.contains("opus-4-1") || fullName.contains("opus-4.1") || fullName.contains("opus-4-0") {
+            return "Opus 4.1"
+        } else if fullName.contains("opus") {
+            return "Opus"
+        } else if fullName.contains("sonnet-4-5") || fullName.contains("sonnet-4.5") {
+            return "Sonnet 4.5"
+        } else if fullName.contains("sonnet-4-0") || fullName.contains("sonnet-4.0") {
+            return "Sonnet 4.0"
+        } else if fullName.contains("sonnet-3-5") || fullName.contains("sonnet-3.5") {
+            return "Sonnet 3.5"
         } else if fullName.contains("sonnet") {
-            if fullName.contains("4-5") || fullName.contains("4.5") {
-                return "sonnet-4.5"
-            } else if fullName.contains("4-0") || fullName.contains("4.0") {
-                return "sonnet-4.0"
-            }
-            return "sonnet"
+            return "Sonnet"
+        } else if fullName.contains("haiku-4-5") || fullName.contains("haiku-4.5") {
+            return "Haiku 4.5"
+        } else if fullName.contains("haiku-3-5") || fullName.contains("haiku-3.5") {
+            return "Haiku 3.5"
         } else if fullName.contains("haiku") {
-            return "haiku"
+            return "Haiku"
         }
         let parts = fullName.split(separator: "-")
         if parts.count > 1 {
             return String(parts.prefix(2).joined(separator: "-"))
         }
         return fullName
+    }
+
+    // Color palette for distinct model colors in charts
+    private let modelColorPalette: [Color] = [
+        .phosphorPurple,
+        .phosphorCyan,
+        .phosphorGreen,
+        .phosphorAmber,
+        .phosphorMagenta,
+        .phosphorOrange,
+        .phosphorRed,
+        Color(red: 0.4, green: 0.8, blue: 0.9),  // Light cyan
+        Color(red: 0.9, green: 0.6, blue: 0.8),  // Pink
+        Color(red: 0.6, green: 0.9, blue: 0.7),  // Mint
+    ]
+
+    private var sortedModelNames: [String] {
+        metricsService.dashboardData.tokensByModelSeries.map { shortModelName($0.model) }
+    }
+
+    private func colorForModel(_ modelName: String, in models: [String]) -> Color {
+        // Get the index of this model in the list to assign a unique color
+        if let index = models.firstIndex(of: modelName) {
+            return modelColorPalette[index % modelColorPalette.count]
+        }
+        return .noirTextSecondary
+    }
+
+    private func colorForModel(_ modelName: String) -> Color {
+        // Use indexed color when we have the model list
+        let models = sortedModelNames
+        if let index = models.firstIndex(of: modelName) {
+            return modelColorPalette[index % modelColorPalette.count]
+        }
+        // Fallback for legacy calls - use model family-based colors
+        switch modelName.lowercased() {
+        case let name where name.contains("opus"):
+            return .phosphorPurple
+        case let name where name.contains("sonnet"):
+            return .phosphorCyan
+        case let name where name.contains("haiku"):
+            return .phosphorGreen
+        default:
+            return .noirTextSecondary
+        }
     }
 
     private func displayTypeName(_ type: String) -> String {
@@ -243,7 +477,116 @@ struct PerformanceDashboardView: View {
     }
 }
 
-// MARK: - Token Type Card
+// MARK: - Terminal Token Type Card
+
+struct TerminalTokenTypeCard: View {
+    let type: String
+    let value: Double
+    let color: Color
+    let icon: String
+    let totalTokens: Double
+
+    @State private var isHovered = false
+    @State private var showCopied = false
+
+    private var percentage: Double {
+        guard totalTokens > 0 else { return 0 }
+        return value / totalTokens
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Header
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(color)
+                    .phosphorGlow(color, intensity: 0.4, isActive: isHovered)
+
+                Text(type.uppercased())
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .tracking(0.5)
+            }
+
+            // Value
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                if showCopied {
+                    Text("COPIED")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.phosphorGreen)
+                } else {
+                    Text(DashboardData.formatTokenCount(value))
+                        .font(.terminalValueSmall)
+                        .foregroundStyle(Color.noirTextPrimary)
+                        .phosphorGlow(color, intensity: isHovered ? 0.5 : 0.2, isActive: true)
+                        .contentTransition(.numericText())
+                }
+
+                Text(String(format: "%.1f%%", percentage * 100))
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextTertiary)
+            }
+
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.noirStroke)
+                        .frame(height: 3)
+
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(color.opacity(isHovered ? 1 : 0.7))
+                        .frame(width: geometry.size.width * min(1.0, percentage), height: 3)
+                        .phosphorGlow(color, intensity: 0.4, isActive: isHovered)
+                }
+            }
+            .frame(height: 3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                .fill(Color.noirSurface)
+                .overlay {
+                    if isHovered {
+                        RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                            .fill(color.opacity(0.05))
+                    }
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                .strokeBorder(isHovered ? color.opacity(0.3) : Color.noirStroke, lineWidth: 1)
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .onTapGesture(count: 2) {
+            copyValue()
+        }
+        .contextMenu {
+            Button(action: copyValue) {
+                Label("Copy Value", systemImage: "doc.on.doc")
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(type): \(DashboardData.formatTokenCount(value))")
+    }
+
+    private func copyValue() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(DashboardData.formatTokenCount(value), forType: .string)
+        withAnimation { showCopied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation { showCopied = false }
+        }
+    }
+}
+
+// MARK: - Legacy Component (kept for compatibility)
 
 struct TokenTypeCard: View {
     let type: String
@@ -252,40 +595,13 @@ struct TokenTypeCard: View {
     let icon: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Text(type)
-                    .foregroundStyle(.secondary)
-            }
-            .font(.subheadline)
-
-            Text(DashboardData.formatTokenCount(value))
-                .font(.system(.title2, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
-
-            // Percentage bar (optional visualization)
-            GeometryReader { geometry in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(color.opacity(0.3))
-                    .frame(height: 4)
-                    .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(color)
-                            .frame(width: geometry.size.width * min(1.0, value / max(1, totalTokens)), height: 4)
-                    }
-            }
-            .frame(height: 4)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var totalTokens: Double {
-        value // This would ideally be the total, but we calculate percentage relative to self
+        TerminalTokenTypeCard(
+            type: type,
+            value: value,
+            color: color,
+            icon: icon,
+            totalTokens: value
+        )
     }
 }
 

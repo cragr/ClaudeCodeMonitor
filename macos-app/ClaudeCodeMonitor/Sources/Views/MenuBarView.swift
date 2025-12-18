@@ -1,5 +1,8 @@
 import SwiftUI
 
+// MARK: - Menu Bar View
+// Terminal Noir aesthetic for menu bar extra
+
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var settingsManager: SettingsManager
@@ -30,36 +33,39 @@ struct MenuBarView: View {
     var body: some View {
         VStack(spacing: 0) {
             headerView
-                .padding(.horizontal, .spacingLG)
-                .padding(.vertical, .spacingMD)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
 
             Divider()
+                .background(Color.noirStroke)
 
             timeRangeSelector
-                .padding(.horizontal, .spacingLG)
-                .padding(.vertical, .spacingSM)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.sm)
 
             Divider()
+                .background(Color.noirStroke)
 
             ScrollView {
-                VStack(spacing: .spacingLG) {
+                VStack(spacing: Spacing.lg) {
                     if metricsService.connectionStatus.isConnected {
                         quickStatsView
                     } else {
                         disconnectedView
                     }
                 }
-                .padding(.spacingLG)
+                .padding(Spacing.lg)
             }
             .frame(maxHeight: maxContentHeight)
 
             Divider()
+                .background(Color.noirStroke)
 
             actionsView
-                .padding(.spacingMD)
+                .padding(Spacing.md)
         }
-        .frame(width: 340)
-        .background(.regularMaterial)
+        .frame(width: 320)
+        .background(Color.noirSurface)
     }
 
     private var maxContentHeight: CGFloat {
@@ -73,41 +79,61 @@ struct MenuBarView: View {
     // MARK: - Header View
 
     private var headerView: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "terminal.fill")
-                .font(.title3)
-                .foregroundStyle(.tint)
-                .symbolRenderingMode(.hierarchical)
-                .accessibilityHidden(true)
+        HStack(spacing: Spacing.sm) {
+            // Icon with glow
+            ZStack {
+                RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                    .fill(Color.phosphorCyan.opacity(0.15))
+                    .frame(width: 26, height: 26)
 
-            Text("Claude Code")
-                .font(.headline)
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.phosphorCyan)
+                    .phosphorGlow(.phosphorCyan, intensity: 0.4, isActive: true)
+            }
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("CLAUDE CODE")
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextTertiary)
+                    .tracking(1)
+
+                Text("Monitor")
+                    .font(.terminalTitle)
+                    .foregroundStyle(Color.noirTextPrimary)
+            }
 
             Spacer()
 
-            Picker("Detail", selection: $detailLevel) {
+            // Detail level picker
+            HStack(spacing: Spacing.xxs) {
                 ForEach(DetailLevel.allCases, id: \.self) { level in
-                    Image(systemName: level.icon)
-                        .tag(level)
+                    Button(action: { detailLevel = level }) {
+                        Image(systemName: level.icon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(detailLevel == level ? Color.phosphorCyan : Color.noirTextTertiary)
+                            .frame(width: 22, height: 22)
+                            .background(detailLevel == level ? Color.phosphorCyan.opacity(0.15) : .clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help(level.description)
                 }
             }
-            .pickerStyle(.segmented)
-            .frame(width: 90)
-            .labelsHidden()
-            .help("Change detail level")
             .accessibilityLabel("Detail level")
 
-            ConnectionStatusBadge(status: metricsService.connectionStatus)
+            TerminalStatusBadge(status: metricsService.connectionStatus)
         }
     }
 
     // MARK: - Time Range Selector
 
     private var timeRangeSelector: some View {
-        HStack(spacing: .spacingSM) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: "calendar")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.noirTextTertiary)
                 .accessibilityHidden(true)
 
             Picker("Time Range", selection: $metricsService.currentTimeRange) {
@@ -116,85 +142,115 @@ struct MenuBarView: View {
                 }
             }
             .pickerStyle(.menu)
-            .frame(maxWidth: .infinity)
             .labelsHidden()
             .accessibilityLabel("Time range")
 
-            HStack(spacing: .spacingXS) {
-                QuickTimeButton(preset: .last1Hour, current: $metricsService.currentTimeRange)
-                QuickTimeButton(preset: .last1Day, current: $metricsService.currentTimeRange)
-                QuickTimeButton(preset: .last1Week, current: $metricsService.currentTimeRange)
+            Spacer()
+
+            // Quick time buttons
+            HStack(spacing: Spacing.xxs) {
+                TerminalQuickTimeButton(preset: .last1Hour, current: $metricsService.currentTimeRange)
+                TerminalQuickTimeButton(preset: .last1Day, current: $metricsService.currentTimeRange)
+                TerminalQuickTimeButton(preset: .last1Week, current: $metricsService.currentTimeRange)
             }
         }
-        .padding(.spacingSM)
-        .background(.quaternary.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(Spacing.sm)
+        .background(Color.noirBackground.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
+        }
     }
 
     // MARK: - Quick Stats
 
     private var quickStatsView: some View {
-        VStack(spacing: .spacingMD) {
+        VStack(spacing: Spacing.md) {
             // Primary stats - always visible
-            GroupBox {
-                VStack(spacing: 10) {
-                    ModernMenuBarStatRow(
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    Text("USAGE")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
+                        .tracking(1)
+
+                    Spacer()
+
+                    Text(metricsService.currentTimeRange.shortName)
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextQuaternary)
+                }
+
+                VStack(spacing: Spacing.sm) {
+                    TerminalMenuBarStatRow(
                         icon: "dollarsign.circle.fill",
                         label: "Cost",
                         value: metricsService.dashboardData.formattedCost,
-                        color: .metricGreen
+                        color: .phosphorGreen
                     )
 
                     if detailLevel != .compact {
-                        ModernMenuBarStatRow(
+                        TerminalMenuBarStatRow(
                             icon: "number.circle.fill",
                             label: "Tokens",
                             value: metricsService.dashboardData.formattedTokens,
-                            color: .metricBlue
+                            color: .phosphorCyan
                         )
                     }
 
-                    ModernMenuBarStatRow(
+                    TerminalMenuBarStatRow(
                         icon: "clock.fill",
                         label: "Active Time",
                         value: metricsService.dashboardData.formattedActiveTime,
-                        color: .metricOrange
+                        color: .phosphorAmber
                     )
                 }
-            } label: {
-                HStack {
-                    Text("Usage")
-                        .font(.caption.weight(.medium))
-                    Spacer()
-                    Text(metricsService.currentTimeRange.shortName)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+            }
+            .padding(Spacing.md)
+            .background {
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .fill(Color.noirBackground.opacity(0.5))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .strokeBorder(Color.noirStroke, lineWidth: 1)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Usage metrics for \(metricsService.currentTimeRange.shortName)")
 
             // Code stats - visible in standard and expanded
             if detailLevel != .compact {
-                GroupBox {
-                    VStack(spacing: 10) {
-                        ModernMenuBarStatRow(
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("CODE CHANGES")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
+                        .tracking(1)
+
+                    VStack(spacing: Spacing.sm) {
+                        TerminalMenuBarStatRow(
                             icon: "plus.circle.fill",
                             label: "Lines Added",
                             value: "+\(String(format: "%.0f", metricsService.dashboardData.linesAdded))",
-                            color: .metricMint
+                            color: .phosphorMagenta
                         )
 
-                        ModernMenuBarStatRow(
+                        TerminalMenuBarStatRow(
                             icon: "minus.circle.fill",
                             label: "Lines Removed",
                             value: "-\(String(format: "%.0f", metricsService.dashboardData.linesRemoved))",
-                            color: .metricRed
+                            color: .phosphorRed
                         )
                     }
-                } label: {
-                    Text("Code Changes")
-                        .font(.caption.weight(.medium))
+                }
+                .padding(Spacing.md)
+                .background {
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .fill(Color.noirBackground.opacity(0.5))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .strokeBorder(Color.noirStroke, lineWidth: 1)
                 }
                 .transition(.asymmetric(
                     insertion: .push(from: .bottom).combined(with: .opacity),
@@ -206,25 +262,36 @@ struct MenuBarView: View {
 
             // Git stats - only in expanded mode
             if detailLevel == .expanded {
-                GroupBox {
-                    VStack(spacing: 10) {
-                        ModernMenuBarStatRow(
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("GIT ACTIVITY")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
+                        .tracking(1)
+
+                    VStack(spacing: Spacing.sm) {
+                        TerminalMenuBarStatRow(
                             icon: "checkmark.circle.fill",
                             label: "Commits",
                             value: String(format: "%.0f", metricsService.dashboardData.commitCount),
-                            color: .metricIndigo
+                            color: .phosphorPurple
                         )
 
-                        ModernMenuBarStatRow(
+                        TerminalMenuBarStatRow(
                             icon: "arrow.triangle.pull",
                             label: "Pull Requests",
                             value: String(format: "%.0f", metricsService.dashboardData.prCount),
-                            color: .metricTeal
+                            color: .phosphorCyan
                         )
                     }
-                } label: {
-                    Text("Git Activity")
-                        .font(.caption.weight(.medium))
+                }
+                .padding(Spacing.md)
+                .background {
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .fill(Color.noirBackground.opacity(0.5))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                        .strokeBorder(Color.noirStroke, lineWidth: 1)
                 }
                 .transition(.asymmetric(
                     insertion: .push(from: .bottom).combined(with: .opacity),
@@ -240,27 +307,33 @@ struct MenuBarView: View {
     // MARK: - Disconnected View
 
     private var disconnectedView: some View {
-        VStack(spacing: .spacingSM) {
+        VStack(spacing: Spacing.md) {
             Image(systemName: "wifi.slash")
-                .font(.title2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 28, weight: .thin))
+                .foregroundStyle(Color.phosphorRed)
+                .phosphorGlow(.phosphorRed, intensity: 0.4, isActive: true)
                 .accessibilityHidden(true)
 
-            Text("Not Connected")
-                .font(.subheadline)
+            VStack(spacing: Spacing.xs) {
+                Text("NOT CONNECTED")
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextPrimary)
+                    .tracking(1)
 
-            Text(metricsService.errorMessage ?? "Unable to reach Prometheus")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button("Retry") {
-                Task { await metricsService.checkConnection() }
+                Text(metricsService.errorMessage ?? "Unable to reach Prometheus")
+                    .font(.terminalCaptionSmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
+
+            Button(action: { Task { await metricsService.checkConnection() } }) {
+                Text("RETRY")
+                    .font(.terminalCaptionSmall)
+                    .tracking(1)
+            }
+            .buttonStyle(TerminalButtonStyle(color: .phosphorCyan, isProminent: true))
         }
-        .padding(.vertical, .spacingSM)
+        .padding(.vertical, Spacing.md)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Not connected to Prometheus. \(metricsService.errorMessage ?? "")")
     }
@@ -268,52 +341,64 @@ struct MenuBarView: View {
     // MARK: - Actions
 
     private var actionsView: some View {
-        VStack(spacing: .spacingSM) {
-            HStack(spacing: .spacingSM) {
+        VStack(spacing: Spacing.sm) {
+            HStack(spacing: Spacing.sm) {
                 Button(action: { Task { await metricsService.refreshDashboard() } }) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: Spacing.xs) {
                         if metricsService.isLoading {
-                            ProgressView()
-                                .scaleEffect(0.5)
-                                .frame(width: 14, height: 14)
+                            TerminalLoadingIndicator(color: .phosphorCyan)
+                                .scaleEffect(0.6)
                         } else {
                             Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14))
+                                .font(.system(size: 11))
                         }
-                        Text("Refresh")
-                            .font(.system(size: 13))
+                        Text("REFRESH")
+                            .font(.terminalCaptionSmall)
+                            .tracking(0.5)
                     }
+                    .foregroundStyle(Color.phosphorCyan)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.sm)
+                    .background {
+                        RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                            .strokeBorder(Color.phosphorCyan.opacity(0.4), lineWidth: 1)
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
+                .buttonStyle(.plain)
                 .disabled(metricsService.isLoading)
                 .accessibilityLabel("Refresh metrics")
 
                 Button(action: openMainWindow) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: Spacing.xs) {
                         Image(systemName: "macwindow")
-                            .font(.system(size: 14))
-                        Text("Dashboard")
-                            .font(.system(size: 13))
+                            .font(.system(size: 11))
+                        Text("DASHBOARD")
+                            .font(.terminalCaptionSmall)
+                            .tracking(0.5)
                     }
+                    .foregroundStyle(Color.noirBackground)
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.sm)
+                    .background {
+                        RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                            .fill(Color.phosphorCyan)
+                    }
+                    .phosphorGlow(.phosphorCyan, intensity: 0.3, isActive: true)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+                .buttonStyle(.plain)
                 .accessibilityLabel("Open dashboard window")
             }
 
             HStack {
                 if let lastRefresh = metricsService.lastRefresh {
-                    HStack(spacing: .spacingXS) {
+                    HStack(spacing: Spacing.xxs) {
                         Image(systemName: "clock")
-                            .font(.system(size: 10))
+                            .font(.system(size: 9))
                             .accessibilityHidden(true)
                         Text("Updated \(lastRefresh, style: .relative) ago")
-                            .font(.caption2)
+                            .font(.terminalCaptionSmall)
                     }
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Color.noirTextQuaternary)
                     .accessibilityLabel("Last updated \(lastRefresh, style: .relative) ago")
                 }
 
@@ -321,8 +406,8 @@ struct MenuBarView: View {
 
                 Button(action: { NSApp.terminate(nil) }) {
                     Image(systemName: "power")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.noirTextTertiary)
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut("q", modifiers: .command)
@@ -344,9 +429,9 @@ struct MenuBarView: View {
     }
 }
 
-// MARK: - Modern Menu Bar Stat Row
+// MARK: - Terminal Menu Bar Stat Row
 
-struct ModernMenuBarStatRow: View {
+struct TerminalMenuBarStatRow: View {
     let icon: String
     let label: String
     let value: String
@@ -355,29 +440,30 @@ struct ModernMenuBarStatRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: .spacingMD) {
+        HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.system(size: 12))
                 .foregroundStyle(color)
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: 20)
+                .frame(width: 18)
+                .phosphorGlow(color, intensity: 0.3, isActive: isHovered)
                 .accessibilityHidden(true)
 
             Text(label)
-                .font(.cardSubtitle)
-                .foregroundStyle(.secondary)
+                .font(.terminalCaptionSmall)
+                .foregroundStyle(Color.noirTextSecondary)
 
             Spacer()
 
             Text(value)
-                .font(.system(.caption, design: .monospaced, weight: .semibold))
-                .foregroundStyle(isHovered ? .primary : .secondary)
+                .font(.terminalData)
+                .foregroundStyle(isHovered ? color : Color.noirTextPrimary)
+                .phosphorGlow(color, intensity: 0.3, isActive: isHovered)
                 .contentTransition(.numericText())
         }
-        .padding(.horizontal, .spacingSM)
-        .padding(.vertical, .spacingXS)
-        .background(isHovered ? color.opacity(0.08) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(isHovered ? color.opacity(0.08) : .clear)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous))
         .onHover { hovering in
             withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -388,9 +474,9 @@ struct ModernMenuBarStatRow: View {
     }
 }
 
-// MARK: - Quick Time Button
+// MARK: - Terminal Quick Time Button
 
-struct QuickTimeButton: View {
+struct TerminalQuickTimeButton: View {
     let preset: TimeRangePreset
     @Binding var current: TimeRangePreset
     @State private var isHovered = false
@@ -412,12 +498,22 @@ struct QuickTimeButton: View {
     var body: some View {
         Button(action: { current = preset }) {
             Text(shortLabel)
-                .font(.caption2.weight(.medium))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(isSelected ? Color.accentColor : (isHovered ? Color.gray.opacity(0.2) : Color.clear))
-                .foregroundStyle(isSelected ? .white : .secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .font(.terminalCaptionSmall)
+                .padding(.horizontal, Spacing.xs)
+                .padding(.vertical, Spacing.xxs)
+                .background(
+                    isSelected
+                        ? Color.phosphorCyan.opacity(0.2)
+                        : (isHovered ? Color.noirStroke : .clear)
+                )
+                .foregroundStyle(isSelected ? Color.phosphorCyan : Color.noirTextTertiary)
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .overlay {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .strokeBorder(Color.phosphorCyan.opacity(0.4), lineWidth: 1)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -426,6 +522,36 @@ struct QuickTimeButton: View {
             }
         }
         .accessibilityLabel("Set time range to \(preset.displayName)")
+    }
+}
+
+// MARK: - Legacy Components (kept for compatibility)
+
+struct ModernMenuBarStatRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        TerminalMenuBarStatRow(icon: icon, label: label, value: value, color: color)
+    }
+}
+
+struct QuickTimeButton: View {
+    let preset: TimeRangePreset
+    @Binding var current: TimeRangePreset
+
+    var body: some View {
+        TerminalQuickTimeButton(preset: preset, current: $current)
+    }
+}
+
+struct ConnectionStatusBadge: View {
+    let status: ConnectionStatus
+
+    var body: some View {
+        TerminalStatusBadge(status: status)
     }
 }
 

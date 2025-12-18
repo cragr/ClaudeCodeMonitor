@@ -2,14 +2,19 @@ import SwiftUI
 import Charts
 
 // MARK: - Stats Cache View
+// Terminal Noir aesthetic for local stats display
 
 struct StatsCacheView: View {
     @StateObject private var loader = StatsCacheLoader()
+    @State private var appearAnimation = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: Spacing.xl) {
                 headerSection
+                    .opacity(appearAnimation ? 1 : 0)
+                    .offset(y: appearAnimation ? 0 : 10)
 
                 if loader.isLoading {
                     loadingView
@@ -17,57 +22,120 @@ struct StatsCacheView: View {
                     errorView(error)
                 } else if let stats = loader.statsCache {
                     statsContent(stats)
+                        .opacity(appearAnimation ? 1 : 0)
+                        .offset(y: appearAnimation ? 0 : 15)
                 } else if !loader.fileExists {
                     noFileView
                 } else {
                     emptyStateView
                 }
             }
-            .padding(24)
+            .padding(Spacing.xl)
         }
         .frame(minWidth: 650, minHeight: 550)
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(Color.noirBackground)
         .task {
             await loader.load()
+        }
+        .onAppear {
+            withAnimation(reduceMotion ? .none : .easeOut(duration: 0.5)) {
+                appearAnimation = true
+            }
         }
     }
 
     // MARK: - Header Section
 
     private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Local Stats Cache")
-                    .font(.title2.weight(.semibold))
-                Text("Claude Code usage statistics from ~/.claude/stats-cache.json")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.sm) {
+                    Circle()
+                        .fill(Color.phosphorPurple)
+                        .frame(width: 8, height: 8)
+                        .phosphorGlow(.phosphorPurple, intensity: 0.6, isActive: true)
+
+                    Text("LOCAL STATS CACHE")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextSecondary)
+                        .tracking(2)
+                }
+
+                Text("Claude Code Usage")
+                    .font(.terminalHeadline)
+                    .foregroundStyle(Color.noirTextPrimary)
+
+                Text("~/.claude/stats-cache.json")
+                    .font(.terminalDataSmall)
+                    .foregroundStyle(Color.noirTextTertiary)
             }
 
             Spacer()
 
-            if let lastLoad = loader.lastLoadTime {
-                Text("Loaded \(lastLoad, style: .relative) ago")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+            VStack(alignment: .trailing, spacing: Spacing.sm) {
+                if let lastLoad = loader.lastLoadTime {
+                    Text("Loaded \(lastLoad, style: .relative) ago")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
+                }
 
-            Button(action: { Task { await loader.load() } }) {
-                Label("Refresh", systemImage: "arrow.clockwise")
+                Button(action: { Task { await loader.load() } }) {
+                    HStack(spacing: Spacing.xs) {
+                        if loader.isLoading {
+                            TerminalLoadingIndicator(color: .phosphorCyan)
+                                .scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 11))
+                        }
+                        Text("REFRESH")
+                            .font(.terminalCaptionSmall)
+                            .tracking(1)
+                    }
+                    .foregroundStyle(Color.phosphorCyan)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.sm)
+                    .background {
+                        Capsule()
+                            .strokeBorder(Color.noirStroke, lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(loader.isLoading)
             }
-            .buttonStyle(.bordered)
-            .disabled(loader.isLoading)
+        }
+        .padding(Spacing.lg)
+        .background {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .fill(Color.noirSurface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.phosphorPurple.opacity(0.06), .clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.large, style: .continuous)
+                .strokeBorder(Color.noirStroke, lineWidth: 1)
         }
     }
 
     // MARK: - Loading View
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-            Text("Loading stats cache...")
-                .foregroundStyle(.secondary)
+        VStack(spacing: Spacing.lg) {
+            TerminalLoadingIndicator(color: .phosphorPurple)
+                .scaleEffect(1.5)
+
+            Text("LOADING STATS CACHE")
+                .font(.terminalCaptionSmall)
+                .foregroundStyle(Color.noirTextSecondary)
+                .tracking(2)
         }
         .frame(maxWidth: .infinity, minHeight: 300)
     }
@@ -75,51 +143,72 @@ struct StatsCacheView: View {
     // MARK: - Error View
 
     private func errorView(_ error: String) -> some View {
-        ContentUnavailableView {
-            Label("Error Loading Stats", systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(error)
-        } actions: {
-            Button("Try Again") {
-                Task { await loader.load() }
+        VStack(spacing: Spacing.xl) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40, weight: .thin))
+                .foregroundStyle(Color.phosphorRed)
+                .phosphorGlow(.phosphorRed, intensity: 0.5, isActive: true)
+
+            VStack(spacing: Spacing.sm) {
+                Text("ERROR LOADING STATS")
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextPrimary)
+                    .tracking(2)
+
+                Text(error)
+                    .font(.terminalBodySmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 300)
             }
-            .buttonStyle(.borderedProminent)
+
+            Button(action: { Task { await loader.load() } }) {
+                Text("TRY AGAIN")
+                    .font(.terminalCaptionSmall)
+                    .tracking(1)
+            }
+            .buttonStyle(TerminalButtonStyle(color: .phosphorCyan, isProminent: true))
         }
+        .frame(maxWidth: .infinity, minHeight: 300)
     }
 
     // MARK: - No File View
 
     private var noFileView: some View {
-        ContentUnavailableView {
-            Label("Stats Cache Not Found", systemImage: "doc.questionmark")
-        } description: {
-            VStack(spacing: 8) {
-                Text("The stats cache file doesn't exist yet.")
-                Text("Use Claude Code to generate usage statistics.")
-                    .foregroundStyle(.secondary)
+        VStack(spacing: Spacing.xl) {
+            Image(systemName: "doc.questionmark")
+                .font(.system(size: 40, weight: .thin))
+                .foregroundStyle(Color.phosphorAmber)
+                .phosphorGlow(.phosphorAmber, intensity: 0.4, isActive: true)
 
-                CopyableCodeBlock(
-                    code: loader.filePath,
-                    label: "Expected path"
-                )
-                .padding(.top, 8)
+            VStack(spacing: Spacing.md) {
+                Text("STATS CACHE NOT FOUND")
+                    .font(.terminalCaption)
+                    .foregroundStyle(Color.noirTextPrimary)
+                    .tracking(2)
+
+                Text("The stats cache file doesn't exist yet.\nUse Claude Code to generate usage statistics.")
+                    .font(.terminalBodySmall)
+                    .foregroundStyle(Color.noirTextSecondary)
+                    .multilineTextAlignment(.center)
+
+                TerminalCodeBlock(code: loader.filePath)
             }
         }
+        .frame(maxWidth: .infinity, minHeight: 300)
     }
 
     // MARK: - Empty State View
 
     private var emptyStateView: some View {
-        ContentUnavailableView {
-            Label("No Stats Available", systemImage: "chart.bar")
-        } description: {
-            Text("Click Refresh to load the stats cache")
-        } actions: {
-            Button("Refresh") {
-                Task { await loader.load() }
-            }
-            .buttonStyle(.borderedProminent)
-        }
+        TerminalEmptyState(
+            title: "No Stats Available",
+            message: "Click Refresh to load the stats cache",
+            icon: "chart.bar",
+            action: { Task { await loader.load() } },
+            actionLabel: "Refresh"
+        )
+        .frame(maxWidth: .infinity, minHeight: 300)
     }
 
     // MARK: - Stats Content
@@ -145,68 +234,67 @@ struct StatsCacheView: View {
     // MARK: - Summary Section
 
     private func summarySection(_ stats: StatsCache) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Summary")
-                .font(.sectionTitle)
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            TerminalSectionHeader("Summary")
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)], spacing: 16) {
-                StatsSummaryCard(
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: Spacing.md)], spacing: Spacing.md) {
+                TerminalMetricCard(
                     title: "Total Tokens",
                     value: formatTokens(stats.totalTokens),
                     icon: "number.circle.fill",
-                    color: .cyan
+                    color: .phosphorCyan
                 )
 
-                StatsSummaryCard(
-                    title: "Total Sessions",
+                TerminalMetricCard(
+                    title: "Sessions",
                     value: "\(stats.totalSessions)",
                     icon: "terminal.fill",
-                    color: .purple
+                    color: .phosphorPurple
                 )
 
-                StatsSummaryCard(
+                TerminalMetricCard(
                     title: "Active Days",
                     value: "\(stats.activeDays)",
                     icon: "calendar",
-                    color: .orange
+                    color: .phosphorOrange
                 )
 
-                StatsSummaryCard(
-                    title: "Avg Messages/Day",
+                TerminalMetricCard(
+                    title: "Avg/Day",
                     value: String(format: "%.1f", stats.averageMessagesPerDay),
                     icon: "chart.line.uptrend.xyaxis",
-                    color: .green
+                    color: .phosphorGreen
                 )
 
-                StatsSummaryCard(
-                    title: "Total Messages",
+                TerminalMetricCard(
+                    title: "Messages",
                     value: formatNumber(stats.totalMessages),
                     icon: "message.fill",
-                    color: .blue
+                    color: .phosphorCyan
                 )
 
-                StatsSummaryCard(
+                TerminalMetricCard(
                     title: "Est. Cost",
                     value: formatCost(stats.totalCost),
                     icon: "dollarsign.circle.fill",
-                    color: .mint
+                    color: .phosphorGreen
                 )
 
                 if let peakHour = stats.peakHour {
-                    StatsSummaryCard(
+                    TerminalMetricCard(
                         title: "Peak Hour",
                         value: formatHour(peakHour),
                         icon: "clock.fill",
-                        color: .indigo
+                        color: .phosphorAmber
                     )
                 }
 
                 if stats.firstSessionDate != nil {
-                    StatsSummaryCard(
+                    TerminalMetricCard(
                         title: "First Session",
                         value: stats.formattedFirstSessionDate ?? "Unknown",
                         icon: "star.fill",
-                        color: .yellow
+                        color: .phosphorAmber
                     )
                 }
             }
@@ -216,39 +304,53 @@ struct StatsCacheView: View {
     // MARK: - Activity Chart Section
 
     private func activityChartSection(_ stats: StatsCache) -> some View {
-        InteractiveChartCard(
+        TerminalChartCard(
             title: "Daily Activity",
+            subtitle: "messages per day",
             onExport: { exportActivityData(stats) }
         ) {
             if stats.dailyActivity.isEmpty {
-                ContentUnavailableView("No Activity Data", systemImage: "chart.bar")
-                    .frame(height: .chartHeightStandard)
+                TerminalEmptyState(
+                    title: "No Activity Data",
+                    message: "No daily activity recorded",
+                    icon: "chart.bar"
+                )
             } else {
                 Chart(stats.dailyActivity) { day in
                     BarMark(
                         x: .value("Date", day.parsedDate ?? Date(), unit: .day),
                         y: .value("Messages", day.messageCount)
                     )
-                    .foregroundStyle(.blue.gradient)
-                    .cornerRadius(4)
+                    .foregroundStyle(Color.phosphorCyan.gradient)
+                    .cornerRadius(3)
                 }
                 .chartXAxis {
                     AxisMarks(values: .automatic) { _ in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks { value in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel {
                             if let val = value.as(Int.self) {
                                 Text(formatNumber(val))
+                                    .font(.terminalDataSmall)
+                                    .foregroundStyle(Color.noirTextTertiary)
                             }
                         }
                     }
                 }
-                .frame(height: .chartHeightStandard)
+                .chartPlotStyle { content in
+                    content
+                        .background(Color.noirBackground.opacity(0.3))
+                }
+                .frame(height: 200)
             }
         }
     }
@@ -256,40 +358,62 @@ struct StatsCacheView: View {
     // MARK: - Model Usage Section
 
     private func modelUsageSection(_ stats: StatsCache) -> some View {
-        InteractiveChartCard(
+        // Get sorted model names for consistent color assignment
+        let sortedModels = Array(stats.modelUsage)
+            .sorted(by: { $0.value.totalTokens > $1.value.totalTokens })
+            .map { shortModelName($0.key) }
+
+        return TerminalChartCard(
             title: "Token Usage by Model",
+            subtitle: "breakdown",
             onExport: { exportModelData(stats) }
         ) {
             if stats.modelUsage.isEmpty {
-                ContentUnavailableView("No Model Data", systemImage: "cpu")
-                    .frame(height: .chartHeightStandard)
+                TerminalEmptyState(
+                    title: "No Model Data",
+                    message: "No model usage recorded",
+                    icon: "cpu"
+                )
             } else {
-                HStack(spacing: 24) {
-                    // Pie Chart
-                    Chart(Array(stats.modelUsage), id: \.key) { model in
+                HStack(spacing: Spacing.xl) {
+                    // Donut Chart
+                    Chart(Array(stats.modelUsage).sorted(by: { $0.value.totalTokens > $1.value.totalTokens }), id: \.key) { model in
                         SectorMark(
                             angle: .value("Tokens", model.value.totalTokens),
-                            innerRadius: .ratio(0.5),
-                            angularInset: 2
+                            innerRadius: .ratio(0.55),
+                            outerRadius: .ratio(0.95),
+                            angularInset: 3
                         )
-                        .foregroundStyle(by: .value("Model", shortModelName(model.key)))
-                        .cornerRadius(6)
+                        .foregroundStyle(colorForModel(shortModelName(model.key), in: sortedModels))
+                        .cornerRadius(4)
                     }
-                    .chartLegend(position: .trailing, alignment: .center)
-                    .frame(width: .chartHeightStandard, height: .chartHeightStandard)
+                    .chartBackground { _ in
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [Color.noirSurface, Color.noirBackground.opacity(0.5)],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 80
+                                )
+                            )
+                    }
+                    .frame(width: 180, height: 180)
 
                     // Details Table
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
                         ForEach(Array(stats.modelUsage).sorted(by: { $0.value.totalTokens > $1.value.totalTokens }), id: \.key) { model in
-                            ModelUsageRow(
+                            TerminalModelUsageRow(
                                 modelName: shortModelName(model.key),
                                 usage: model.value,
-                                fullName: model.key
+                                fullName: model.key,
+                                color: colorForModel(shortModelName(model.key), in: sortedModels)
                             )
                         }
                     }
-                    .frame(width: 280)
+                    .frame(width: 260)
                 }
+                .frame(height: 200)
             }
         }
     }
@@ -297,13 +421,17 @@ struct StatsCacheView: View {
     // MARK: - Hourly Distribution Section
 
     private func hourlyDistributionSection(_ stats: StatsCache) -> some View {
-        InteractiveChartCard(
-            title: "Activity by Hour of Day",
+        TerminalChartCard(
+            title: "Activity by Hour",
+            subtitle: "when you code",
             onExport: { exportHourlyData(stats) }
         ) {
             if stats.hourCounts.isEmpty {
-                ContentUnavailableView("No Hourly Data", systemImage: "clock")
-                    .frame(height: .chartHeightCompact)
+                TerminalEmptyState(
+                    title: "No Hourly Data",
+                    message: "No hourly distribution recorded",
+                    icon: "clock"
+                )
             } else {
                 let hourData = (0..<24).map { hour in
                     (hour: hour, count: stats.hourCounts[String(hour)] ?? 0)
@@ -315,27 +443,39 @@ struct StatsCacheView: View {
                         y: .value("Sessions", item.count)
                     )
                     .foregroundStyle(
-                        item.hour >= 9 && item.hour <= 17 ? Color.blue.gradient : Color.blue.opacity(0.5).gradient
+                        item.hour >= 9 && item.hour <= 17
+                            ? Color.phosphorCyan.gradient
+                            : Color.phosphorCyan.opacity(0.4).gradient
                     )
                     .cornerRadius(2)
                 }
                 .chartXAxis {
                     AxisMarks(values: [0, 6, 12, 18, 23]) { value in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel {
                             if let hour = value.as(Int.self) {
                                 Text(formatHour(hour))
+                                    .font(.terminalDataSmall)
+                                    .foregroundStyle(Color.noirTextTertiary)
                             }
                         }
                     }
                 }
                 .chartYAxis {
                     AxisMarks { _ in
-                        AxisGridLine()
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.noirStroke)
                         AxisValueLabel()
+                            .font(.terminalDataSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
                     }
                 }
-                .frame(height: .chartHeightCompact)
+                .chartPlotStyle { content in
+                    content
+                        .background(Color.noirBackground.opacity(0.3))
+                }
+                .frame(height: 150)
             }
         }
     }
@@ -343,34 +483,48 @@ struct StatsCacheView: View {
     // MARK: - Details Section
 
     private func detailsSection(_ stats: StatsCache) -> some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                DetailRow(label: "Cache Version", value: "\(stats.version)")
-                DetailRow(label: "Last Computed", value: stats.lastComputedDate)
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            TerminalSectionHeader("Details")
+
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                TerminalDetailRow(label: "Cache Version", value: "\(stats.version)")
+                TerminalDetailRow(label: "Last Computed", value: stats.lastComputedDate)
 
                 if let longest = stats.longestSession {
                     Divider()
-                    Text("Longest Session")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    DetailRow(label: "Duration", value: longest.formattedDuration)
-                    DetailRow(label: "Messages", value: "\(longest.messageCount)")
-                    DetailRow(label: "Date", value: longest.formattedDate)
+                        .background(Color.noirStroke)
+
+                    Text("LONGEST SESSION")
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
+                        .tracking(1)
+                        .padding(.top, Spacing.xs)
+
+                    TerminalDetailRow(label: "Duration", value: longest.formattedDuration)
+                    TerminalDetailRow(label: "Messages", value: "\(longest.messageCount)")
+                    TerminalDetailRow(label: "Date", value: longest.formattedDate)
                 }
 
                 Divider()
+                    .background(Color.noirStroke)
 
                 HStack {
                     Text("File Path")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.terminalCaptionSmall)
+                        .foregroundStyle(Color.noirTextTertiary)
                     Spacer()
-                    CopyableCodeBlock(code: loader.filePath, label: nil)
+                    TerminalCodeBlock(code: loader.filePath)
                 }
             }
-        } label: {
-            Label("Details", systemImage: "info.circle")
-                .font(.headline)
+            .padding(Spacing.lg)
+            .background {
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .fill(Color.noirSurface)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .strokeBorder(Color.noirStroke, lineWidth: 1)
+            }
         }
     }
 
@@ -420,27 +574,49 @@ struct StatsCacheView: View {
 
     private func shortModelName(_ fullName: String) -> String {
         if fullName.contains("opus-4-5") || fullName.contains("opus-4.5") {
-            return "Claude Opus 4.5"
+            return "Opus 4.5"
         } else if fullName.contains("opus-4-1") || fullName.contains("opus-4.1") || fullName.contains("opus-4-0") {
-            return "Claude Opus 4.1"
+            return "Opus 4.1"
         } else if fullName.contains("opus") {
-            return "Claude Opus"
+            return "Opus"
         } else if fullName.contains("sonnet-4-5") || fullName.contains("sonnet-4.5") {
-            return "Claude Sonnet 4.5"
+            return "Sonnet 4.5"
         } else if fullName.contains("sonnet-4-0") || fullName.contains("sonnet-4.0") {
-            return "Claude Sonnet 4.0"
+            return "Sonnet 4.0"
         } else if fullName.contains("sonnet-3-5") || fullName.contains("sonnet-3.5") {
-            return "Claude Sonnet 3.5"
+            return "Sonnet 3.5"
         } else if fullName.contains("sonnet") {
-            return "Claude Sonnet"
+            return "Sonnet"
         } else if fullName.contains("haiku-4-5") || fullName.contains("haiku-4.5") {
-            return "Claude Haiku 4.5"
+            return "Haiku 4.5"
         } else if fullName.contains("haiku-3-5") || fullName.contains("haiku-3.5") {
-            return "Claude Haiku 3.5"
+            return "Haiku 3.5"
         } else if fullName.contains("haiku") {
-            return "Claude Haiku"
+            return "Haiku"
         }
         return fullName
+    }
+
+    // Color palette for distinct model colors in charts
+    private let modelColorPalette: [Color] = [
+        .phosphorPurple,
+        .phosphorCyan,
+        .phosphorGreen,
+        .phosphorAmber,
+        .phosphorMagenta,
+        .phosphorOrange,
+        .phosphorRed,
+        Color(red: 0.4, green: 0.8, blue: 0.9),  // Light cyan
+        Color(red: 0.9, green: 0.6, blue: 0.8),  // Pink
+        Color(red: 0.6, green: 0.9, blue: 0.7),  // Mint
+    ]
+
+    private func colorForModel(_ name: String, in models: [String]) -> Color {
+        // Get the index of this model in the list to assign a unique color
+        if let index = models.firstIndex(of: name) {
+            return modelColorPalette[index % modelColorPalette.count]
+        }
+        return .noirTextSecondary
     }
 
     // MARK: - Export Functions
@@ -482,138 +658,141 @@ struct StatsCacheView: View {
     }
 }
 
-// MARK: - Stats Summary Card
+// MARK: - Terminal Code Block
 
-struct StatsSummaryCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-
-    @State private var isHovered = false
+struct TerminalCodeBlock: View {
+    let code: String
     @State private var showCopied = false
 
     var body: some View {
-        GroupBox {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                    .font(.system(.title2, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.primary)
-
-                if showCopied {
-                    Text("Copied!")
-                        .font(.caption2)
-                        .foregroundStyle(.green)
+        HStack(spacing: Spacing.sm) {
+            Text(code)
+                .font(.terminalDataSmall)
+                .foregroundStyle(Color.phosphorGreen)
+                .textSelection(.enabled)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, Spacing.xs)
+                .background {
+                    RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                        .fill(Color.noirBackground)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                                .strokeBorder(Color.noirStroke, lineWidth: 1)
+                        }
                 }
+
+            Button(action: copyToClipboard) {
+                Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 10))
+                    .foregroundStyle(showCopied ? Color.phosphorGreen : Color.noirTextTertiary)
             }
-        } label: {
-            Label(title, systemImage: icon)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(color)
+            .buttonStyle(.plain)
         }
-        .groupBoxStyle(CardGroupBoxStyle(isHovered: isHovered))
-        .onHover { hovering in
-            withAnimation(.spring(response: 0.3)) {
-                isHovered = hovering
-            }
-        }
-        .onTapGesture(count: 2) {
-            copyValue()
-        }
-        .contextMenu {
-            Button(action: copyValue) {
-                Label("Copy Value", systemImage: "doc.on.doc")
-            }
-        }
-        .help("Double-click to copy")
     }
 
-    private func copyValue() {
+    private func copyToClipboard() {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(value, forType: .string)
-        withAnimation {
-            showCopied = true
-        }
+        NSPasteboard.general.setString(code, forType: .string)
+        withAnimation { showCopied = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                showCopied = false
-            }
+            withAnimation { showCopied = false }
         }
     }
 }
 
-// MARK: - Model Usage Row
+// MARK: - Terminal Detail Row
 
-struct ModelUsageRow: View {
+struct TerminalDetailRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.terminalCaptionSmall)
+                .foregroundStyle(Color.noirTextTertiary)
+            Spacer()
+            Text(value)
+                .font(.terminalData)
+                .foregroundStyle(Color.noirTextSecondary)
+                .textSelection(.enabled)
+        }
+    }
+}
+
+// MARK: - Terminal Model Usage Row
+
+struct TerminalModelUsageRow: View {
     let modelName: String
     let usage: ModelUsage
     let fullName: String
+    let color: Color
 
     @State private var isHovered = false
     @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
-                Circle()
-                    .fill(colorForModel(modelName))
-                    .frame(width: 8, height: 8)
+                HStack(spacing: Spacing.sm) {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 8, height: 8)
+                        .phosphorGlow(color, intensity: 0.4, isActive: isHovered)
 
-                Text(modelName)
-                    .font(.caption.weight(.medium))
+                    Text(modelName)
+                        .font(.terminalCaption)
+                        .foregroundStyle(Color.noirTextSecondary)
+                }
 
                 Spacer()
 
                 Text(formatTokens(usage.totalTokens))
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .font(.terminalData)
+                    .foregroundStyle(isHovered ? color : Color.noirTextPrimary)
 
-                Button(action: { withAnimation { isExpanded.toggle() } }) {
+                Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
                     Image(systemName: "chevron.right")
-                        .font(.caption2)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.noirTextTertiary)
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
                 .buttonStyle(.plain)
             }
 
             if isExpanded {
-                VStack(alignment: .leading, spacing: 2) {
-                    TokenDetailRow(label: "Input", value: usage.inputTokens)
-                    TokenDetailRow(label: "Output", value: usage.outputTokens)
-                    TokenDetailRow(label: "Cache Read", value: usage.cacheReadInputTokens)
-                    TokenDetailRow(label: "Cache Write", value: usage.cacheCreationInputTokens)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    TerminalTokenDetailRow(label: "Input", value: usage.inputTokens)
+                    TerminalTokenDetailRow(label: "Output", value: usage.outputTokens)
+                    TerminalTokenDetailRow(label: "Cache Read", value: usage.cacheReadInputTokens)
+                    TerminalTokenDetailRow(label: "Cache Write", value: usage.cacheCreationInputTokens)
 
                     Divider()
+                        .background(Color.noirStroke)
 
                     HStack {
                         Text("Est. Cost")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.terminalCaptionSmall)
+                            .foregroundStyle(Color.noirTextTertiary)
                         Spacer()
                         Text(String(format: "$%.2f", usage.estimatedCost(for: fullName)))
-                            .font(.system(.caption2, design: .monospaced, weight: .medium))
-                            .foregroundStyle(.green)
+                            .font(.terminalData)
+                            .foregroundStyle(Color.phosphorGreen)
+                            .phosphorGlow(.phosphorGreen, intensity: 0.3, isActive: true)
                     }
                 }
-                .padding(.leading, 16)
+                .padding(.leading, Spacing.lg)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(8)
-        .background(isHovered ? Color.gray.opacity(0.1) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(Spacing.sm)
+        .background(isHovered ? color.opacity(0.05) : .clear)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
             }
         }
-    }
-
-    private func colorForModel(_ name: String) -> Color {
-        if name.contains("Opus") { return .purple }
-        if name.contains("Sonnet") { return .blue }
-        if name.contains("Haiku") { return .green }
-        return .gray
     }
 
     private func formatTokens(_ value: Int) -> String {
@@ -628,21 +807,21 @@ struct ModelUsageRow: View {
     }
 }
 
-// MARK: - Token Detail Row
+// MARK: - Terminal Token Detail Row
 
-struct TokenDetailRow: View {
+struct TerminalTokenDetailRow: View {
     let label: String
     let value: Int
 
     var body: some View {
         HStack {
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(.terminalCaptionSmall)
+                .foregroundStyle(Color.noirTextQuaternary)
             Spacer()
             Text(formatValue(value))
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(.secondary)
+                .font(.terminalDataSmall)
+                .foregroundStyle(Color.noirTextTertiary)
         }
     }
 
@@ -653,70 +832,58 @@ struct TokenDetailRow: View {
     }
 }
 
-// MARK: - Detail Row
+// MARK: - Legacy Components (kept for compatibility)
+
+struct StatsSummaryCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        TerminalMetricCard(title: title, value: value, icon: icon, color: color)
+    }
+}
+
+struct ModelUsageRow: View {
+    let modelName: String
+    let usage: ModelUsage
+    let fullName: String
+
+    var body: some View {
+        TerminalModelUsageRow(
+            modelName: modelName,
+            usage: usage,
+            fullName: fullName,
+            color: .phosphorCyan
+        )
+    }
+}
+
+struct TokenDetailRow: View {
+    let label: String
+    let value: Int
+
+    var body: some View {
+        TerminalTokenDetailRow(label: label, value: value)
+    }
+}
 
 struct DetailRow: View {
     let label: String
     let value: String
 
     var body: some View {
-        HStack {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-        }
+        TerminalDetailRow(label: label, value: value)
     }
 }
-
-// MARK: - Copyable Code Block
 
 struct CopyableCodeBlock: View {
     let code: String
     let label: String?
 
-    @State private var showCopied = false
-
     var body: some View {
-        HStack(spacing: 8) {
-            if let label = label {
-                Text(label)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text(code)
-                .font(.system(.caption2, design: .monospaced))
-                .textSelection(.enabled)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.black.opacity(0.8))
-                .foregroundStyle(.green)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-
-            Button(action: copyToClipboard) {
-                Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
-                    .font(.caption2)
-                    .foregroundStyle(showCopied ? .green : .secondary)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(code, forType: .string)
-        withAnimation {
-            showCopied = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                showCopied = false
-            }
-        }
+        TerminalCodeBlock(code: code)
     }
 }
 
