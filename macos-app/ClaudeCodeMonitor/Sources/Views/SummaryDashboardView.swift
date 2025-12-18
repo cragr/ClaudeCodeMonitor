@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import UniformTypeIdentifiers
 
 // MARK: - Summary Dashboard View (Tab 1)
 // Per spec: KPI tiles for Total spend, Total tokens, Active time, Sessions,
@@ -8,26 +9,33 @@ import Charts
 
 struct SummaryDashboardView: View {
     @ObservedObject var metricsService: MetricsService
+    @State private var showExportMenu = false
 
     private let columns = [
-        GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)
+        GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 20)
     ]
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: 32) {
+                headerSection
                 kpiCardsSection
                 chartsSection
             }
-            .padding()
+            .padding(24)
         }
-        .frame(minWidth: 600, minHeight: 500)
+        .frame(minWidth: 650, minHeight: 550)
+        .background(Color(NSColor.controlBackgroundColor))
         .overlay {
             if metricsService.isLoading {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.ultraThinMaterial)
+                ZStack {
+                    Color.black.opacity(0.05)
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .progressViewStyle(CircularProgressViewStyle())
+                }
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
             }
         }
         .overlay {
@@ -37,68 +45,111 @@ struct SummaryDashboardView: View {
         }
     }
 
+    // MARK: - Header Section
+
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Dashboard Overview")
+                    .font(.title2.weight(.semibold))
+                Text("Showing data for \(metricsService.currentTimeRange.displayName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Export menu
+            Menu {
+                Button(action: copyAllMetrics) {
+                    Label("Copy All Metrics", systemImage: "doc.on.doc")
+                }
+
+                Button(action: exportSummary) {
+                    Label("Export Summary", systemImage: "square.and.arrow.up")
+                }
+
+                Divider()
+
+                Button(action: shareMetrics) {
+                    Label("Share", systemImage: "square.and.arrow.up.on.square")
+                }
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .menuStyle(.borderedButton)
+            .fixedSize()
+        }
+    }
+
     // MARK: - KPI Cards Section
 
     private var kpiCardsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Key Metrics")
-                .font(.title2.bold())
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Key Metrics")
+                    .font(.sectionTitle)
+                Spacer()
+                Text("Double-click to copy")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
 
-            LazyVGrid(columns: columns, spacing: 16) {
-                KPICard(
+            LazyVGrid(columns: columns, spacing: 20) {
+                InteractiveKPICard(
                     title: "Total Spend",
                     value: metricsService.dashboardData.formattedCost,
                     icon: "dollarsign.circle.fill",
-                    color: .green
+                    color: .metricGreen,
+                    subtitle: "USD"
                 )
 
-                KPICard(
-                    title: "Total Tokens",
-                    value: metricsService.dashboardData.formattedTokens,
-                    icon: "number.circle.fill",
-                    color: .blue
-                )
-
-                KPICard(
+                InteractiveKPICard(
                     title: "Active Time",
                     value: metricsService.dashboardData.formattedActiveTime,
                     icon: "clock.fill",
-                    color: .orange
+                    color: .metricOrange,
+                    subtitle: "coding with Claude"
                 )
 
-                KPICard(
-                    title: "Sessions",
-                    value: String(format: "%.0f", metricsService.dashboardData.sessionCount),
-                    icon: "terminal.fill",
-                    color: .purple
+                InteractiveKPICard(
+                    title: "Total Tokens",
+                    value: metricsService.dashboardData.formattedTokens,
+                    icon: "number.circle.fill",
+                    color: .metricBlue,
+                    subtitle: "all models"
                 )
 
-                KPICard(
+                InteractiveKPICard(
                     title: "Lines Added",
                     value: "+\(String(format: "%.0f", metricsService.dashboardData.linesAdded))",
                     icon: "plus.circle.fill",
-                    color: .mint
+                    color: .metricMint,
+                    subtitle: "code added"
                 )
 
-                KPICard(
+                InteractiveKPICard(
                     title: "Lines Removed",
                     value: "-\(String(format: "%.0f", metricsService.dashboardData.linesRemoved))",
                     icon: "minus.circle.fill",
-                    color: .red
+                    color: .metricRed,
+                    subtitle: "code removed"
                 )
 
-                KPICard(
+                InteractiveKPICard(
                     title: "Commits",
                     value: String(format: "%.0f", metricsService.dashboardData.commitCount),
                     icon: "checkmark.circle.fill",
-                    color: .indigo
+                    color: .metricIndigo,
+                    subtitle: "git commits"
                 )
 
-                KPICard(
+                InteractiveKPICard(
                     title: "Pull Requests",
                     value: String(format: "%.0f", metricsService.dashboardData.prCount),
                     icon: "arrow.triangle.pull",
-                    color: .teal
+                    color: .metricTeal,
+                    subtitle: "PRs created"
                 )
             }
         }
@@ -107,78 +158,72 @@ struct SummaryDashboardView: View {
     // MARK: - Charts Section
 
     private var chartsSection: some View {
-        VStack(spacing: 20) {
-            // Cost Rate Chart (USD per unit time)
-            ChartCard(title: "Cost Rate (USD/hour)") {
-                if metricsService.dashboardData.costRateSeries.isEmpty {
+        VStack(spacing: 24) {
+            // Cumulative Total Cost Chart - Interactive
+            InteractiveChartCard(
+                title: "Total Cost Over Period (\(metricsService.currentTimeRange.displayName))",
+                onExport: { exportCostRateData() }
+            ) {
+                if metricsService.dashboardData.costSeries.isEmpty {
                     emptyChartPlaceholder
                 } else {
-                    Chart(metricsService.dashboardData.costRateSeries) { point in
-                        LineMark(
-                            x: .value("Time", point.timestamp),
-                            y: .value("Rate", point.value * 3600) // Convert to hourly rate
-                        )
-                        .foregroundStyle(.green.gradient)
+                    // Calculate cumulative cost scaled to match Total Spend
+                    let cumulativeData = calculateCumulativeCost(
+                        metricsService.dashboardData.costSeries,
+                        targetTotal: metricsService.dashboardData.totalCost
+                    )
 
-                        AreaMark(
-                            x: .value("Time", point.timestamp),
-                            y: .value("Rate", point.value * 3600)
-                        )
-                        .foregroundStyle(.green.opacity(0.1).gradient)
-                    }
-                    .chartXAxis {
-                        AxisMarks(values: .automatic) { _ in
-                            AxisGridLine()
-                            AxisValueLabel(format: metricsService.currentTimeRange.bucketGranularity.chartDateFormat)
-                        }
-                    }
-                    .chartYAxis {
-                        AxisMarks { value in
-                            AxisGridLine()
-                            AxisValueLabel {
-                                if let val = value.as(Double.self) {
-                                    Text("$\(val, specifier: "%.4f")")
-                                }
-                            }
-                        }
-                    }
+                    InteractiveLineChart(
+                        data: cumulativeData,
+                        title: "Total Cost",
+                        color: .metricGreen,
+                        valueFormatter: { String(format: "$%.2f", $0) },
+                        yAxisLabel: "USD"
+                    )
                 }
             }
 
-            // Cost Per Model Breakdown
-            ChartCard(title: "Cost by Model") {
+            // Cost Per Model Breakdown - with context menu
+            InteractiveChartCard(
+                title: "Cost by Model",
+                onExport: { exportModelCostData() }
+            ) {
                 if metricsService.dashboardData.costByModel.isEmpty {
                     emptyChartPlaceholder
                 } else {
-                    HStack(spacing: 20) {
+                    HStack(spacing: 24) {
                         // Pie Chart
                         Chart(Array(metricsService.dashboardData.costByModel), id: \.key) { item in
                             SectorMark(
                                 angle: .value("Cost", item.value),
                                 innerRadius: .ratio(0.5),
-                                angularInset: 1.5
+                                angularInset: 2
                             )
                             .foregroundStyle(by: .value("Model", shortModelName(item.key)))
-                            .cornerRadius(4)
+                            .cornerRadius(6)
                         }
                         .chartLegend(position: .trailing, alignment: .center)
+                        .chartBackground { _ in
+                            Circle()
+                                .fill(Color.gray.opacity(0.03))
+                        }
                         .frame(maxWidth: .infinity)
+                        .frame(height: 200)
 
-                        // Cost breakdown table
-                        VStack(alignment: .leading, spacing: 8) {
+                        // Cost breakdown table with copy functionality
+                        VStack(alignment: .leading, spacing: 10) {
                             ForEach(Array(metricsService.dashboardData.costByModel.sorted { $0.value > $1.value }), id: \.key) { item in
-                                HStack {
-                                    Text(shortModelName(item.key))
-                                        .font(.caption)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Text(DashboardData.formatCost(item.value))
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.secondary)
-                                }
+                                ModelCostRow(
+                                    modelName: shortModelName(item.key),
+                                    cost: item.value,
+                                    color: colorForModel(shortModelName(item.key))
+                                )
                             }
                         }
-                        .frame(width: 180)
+                        .frame(width: 200)
+                        .padding(12)
+                        .background(Color.gray.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                 }
             }
@@ -212,18 +257,27 @@ struct SummaryDashboardView: View {
     }
 
     private func shortModelName(_ fullName: String) -> String {
-        // Shorten model names like "claude-sonnet-4-5-20250929" to "sonnet-4.5"
-        if fullName.contains("opus") {
-            return "opus"
+        // Show exact model versions like "Opus 4.5" or "Opus 4.1"
+        if fullName.contains("opus-4-5") || fullName.contains("opus-4.5") {
+            return "Opus 4.5"
+        } else if fullName.contains("opus-4-1") || fullName.contains("opus-4.1") || fullName.contains("opus-4-0") {
+            return "Opus 4.1"
+        } else if fullName.contains("opus") {
+            return "Opus"
+        } else if fullName.contains("sonnet-4-5") || fullName.contains("sonnet-4.5") {
+            return "Sonnet 4.5"
+        } else if fullName.contains("sonnet-4-0") || fullName.contains("sonnet-4.0") {
+            return "Sonnet 4.0"
+        } else if fullName.contains("sonnet-3-5") || fullName.contains("sonnet-3.5") {
+            return "Sonnet 3.5"
         } else if fullName.contains("sonnet") {
-            if fullName.contains("4-5") || fullName.contains("4.5") {
-                return "sonnet-4.5"
-            } else if fullName.contains("4-0") || fullName.contains("4.0") {
-                return "sonnet-4.0"
-            }
-            return "sonnet"
+            return "Sonnet"
+        } else if fullName.contains("haiku-4-5") || fullName.contains("haiku-4.5") {
+            return "Haiku 4.5"
+        } else if fullName.contains("haiku-3-5") || fullName.contains("haiku-3.5") {
+            return "Haiku 3.5"
         } else if fullName.contains("haiku") {
-            return "haiku"
+            return "Haiku"
         }
         // Return last part of model name if unknown format
         let parts = fullName.split(separator: "-")
@@ -232,54 +286,217 @@ struct SummaryDashboardView: View {
         }
         return fullName
     }
+
+    private func colorForModel(_ modelName: String) -> Color {
+        switch modelName.lowercased() {
+        case let name where name.contains("opus"):
+            return .purple
+        case let name where name.contains("sonnet"):
+            return .blue
+        case let name where name.contains("haiku"):
+            return .green
+        default:
+            return .gray
+        }
+    }
+
+    private func calculateCumulativeCost(_ series: [MetricDataPoint], targetTotal: Double) -> [MetricDataPoint] {
+        guard !series.isEmpty else { return [] }
+
+        // First pass: calculate raw cumulative values
+        var cumulative: Double = 0
+        var rawCumulative = series.map { point -> MetricDataPoint in
+            cumulative += point.value
+            return MetricDataPoint(timestamp: point.timestamp, value: cumulative, labels: point.labels)
+        }
+
+        // Scale the values so the final point matches the target total (Total Spend)
+        let rawTotal = rawCumulative.last?.value ?? 0
+        if rawTotal > 0 && targetTotal > 0 {
+            let scaleFactor = targetTotal / rawTotal
+            rawCumulative = rawCumulative.map { point in
+                MetricDataPoint(timestamp: point.timestamp, value: point.value * scaleFactor, labels: point.labels)
+            }
+        }
+
+        return rawCumulative
+    }
+
+    // MARK: - Export Functions
+
+    private func copyAllMetrics() {
+        let exporter = MetricsSummaryExporter(
+            dashboardData: metricsService.dashboardData,
+            timeRange: metricsService.currentTimeRange.displayName
+        )
+        exporter.copyToClipboard()
+    }
+
+    private func exportSummary() {
+        let exporter = MetricsSummaryExporter(
+            dashboardData: metricsService.dashboardData,
+            timeRange: metricsService.currentTimeRange.displayName
+        )
+        exporter.exportToFile()
+    }
+
+    private func shareMetrics() {
+        let exporter = MetricsSummaryExporter(
+            dashboardData: metricsService.dashboardData,
+            timeRange: metricsService.currentTimeRange.displayName
+        )
+        ChartExportManager.shareData(
+            title: "Claude Code Metrics",
+            data: exporter.generateSummary()
+        )
+    }
+
+    private func exportCostRateData() {
+        let cumulativeData = calculateCumulativeCost(
+            metricsService.dashboardData.costSeries,
+            targetTotal: metricsService.dashboardData.totalCost
+        )
+        let data = cumulativeData.map {
+            (ISO8601DateFormatter().string(from: $0.timestamp), String(format: "%.6f", $0.value))
+        }
+        ChartExportManager.exportToCSV(title: "Total_Cost", data: data)
+    }
+
+    private func exportModelCostData() {
+        let data = metricsService.dashboardData.costByModel.map {
+            (shortModelName($0.key), DashboardData.formatCost($0.value))
+        }
+        ChartExportManager.exportToCSV(title: "Cost_by_Model", data: data)
+    }
 }
 
-// MARK: - KPI Card (Shared Component)
+// MARK: - Model Cost Row (with copy functionality)
 
-struct KPICard: View {
+struct ModelCostRow: View {
+    let modelName: String
+    let cost: Double
+    let color: Color
+    @State private var isHovered = false
+    @State private var showCopied = false
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+                Text(modelName)
+                    .font(.cardSubtitle)
+                    .lineLimit(1)
+            }
+            Spacer()
+
+            if showCopied {
+                Text("Copied!")
+                    .font(.caption2)
+                    .foregroundStyle(.green)
+                    .transition(.opacity)
+            } else {
+                Text(DashboardData.formatCost(cost))
+                    .font(.system(.caption, design: .monospaced, weight: .medium))
+                    .foregroundStyle(isHovered ? .primary : .secondary)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(isHovered ? color.opacity(0.1) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .onTapGesture {
+            copyToClipboard()
+        }
+        .contextMenu {
+            Button(action: copyToClipboard) {
+                Label("Copy Cost", systemImage: "doc.on.doc")
+            }
+            Button(action: copyWithModel) {
+                Label("Copy with Model Name", systemImage: "doc.on.doc.fill")
+            }
+        }
+        .help("Click to copy cost")
+    }
+
+    private func copyToClipboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(DashboardData.formatCost(cost), forType: .string)
+        withAnimation {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            withAnimation {
+                showCopied = false
+            }
+        }
+    }
+
+    private func copyWithModel() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("\(modelName): \(DashboardData.formatCost(cost))", forType: .string)
+        withAnimation {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            withAnimation {
+                showCopied = false
+            }
+        }
+    }
+}
+
+// MARK: - Modern KPI Card
+
+struct ModernKPICard: View {
     let title: String
     let value: String
     let icon: String
     let color: Color
+    @State private var isHovered = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Text(title)
-                    .foregroundStyle(.secondary)
+        GroupBox {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.metricValue)
+                    .foregroundStyle(.primary)
+                    .contentTransition(.numericText())
             }
-            .font(.subheadline)
-
-            Text(value)
-                .font(.system(.title, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.metricLabel)
+                .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .groupBoxStyle(CardGroupBoxStyle(isHovered: isHovered))
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
-// MARK: - Chart Card (Shared Component)
+// MARK: - Modern Chart Card
 
-struct ChartCard<Content: View>: View {
+struct ModernChartCard<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-
+        GroupBox {
             content
-                .frame(height: 200)
+        } label: {
+            Text(title)
+                .font(.chartTitle)
         }
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .groupBoxStyle(ChartGroupBoxStyle())
     }
 }
 
