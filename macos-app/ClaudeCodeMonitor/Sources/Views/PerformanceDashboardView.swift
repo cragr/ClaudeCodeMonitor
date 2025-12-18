@@ -82,7 +82,7 @@ struct PerformanceDashboardView: View {
     // MARK: - Total Tokens Time Series
 
     private var tokenTimeSeriesSection: some View {
-        ChartCard(title: "Total Tokens Over Time") {
+        ModernChartCard(title: "Total Tokens Over Time") {
             if metricsService.dashboardData.tokensSeries.isEmpty {
                 emptyChartPlaceholder
             } else {
@@ -115,6 +115,7 @@ struct PerformanceDashboardView: View {
                         }
                     }
                 }
+                .frame(height: .chartHeightStandard)
             }
         }
     }
@@ -122,7 +123,7 @@ struct PerformanceDashboardView: View {
     // MARK: - Tokens by Model (Stacked/Grouped)
 
     private var tokensByModelSection: some View {
-        ChartCard(title: "Tokens by Model") {
+        ModernChartCard(title: "Tokens by Model") {
             if metricsService.dashboardData.tokensByModelSeries.isEmpty {
                 emptyChartPlaceholder
             } else {
@@ -144,6 +145,7 @@ struct PerformanceDashboardView: View {
                     }
                 }
                 .chartLegend(position: .bottom, alignment: .center)
+                .frame(height: .chartHeightStandard)
             }
         }
     }
@@ -151,7 +153,7 @@ struct PerformanceDashboardView: View {
     // MARK: - Tokens by Type (input/output/cacheRead/cacheCreation)
 
     private var tokensByTypeSection: some View {
-        ChartCard(title: "Tokens by Type") {
+        ModernChartCard(title: "Tokens by Type") {
             if metricsService.dashboardData.tokensByTypeSeries.isEmpty {
                 emptyChartPlaceholder
             } else {
@@ -179,6 +181,7 @@ struct PerformanceDashboardView: View {
                     "Cache Read": Color.orange,
                     "Cache Creation": Color.purple
                 ])
+                .frame(height: .chartHeightStandard)
             }
         }
     }
