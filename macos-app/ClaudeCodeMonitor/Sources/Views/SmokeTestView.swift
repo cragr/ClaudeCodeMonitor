@@ -342,6 +342,8 @@ struct TestResultRow: View {
 
 struct MetricRow: View {
     let name: String
+    @State private var isHovered = false
+    @State private var showCopied = false
 
     var body: some View {
         HStack {
@@ -349,12 +351,55 @@ struct MetricRow: View {
                 .foregroundStyle(.blue)
             Text(name)
                 .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
             Spacer()
+
+            if showCopied {
+                Text("Copied!")
+                    .font(.caption2)
+                    .foregroundStyle(.green)
+                    .transition(.opacity.combined(with: .scale))
+            } else if isHovered {
+                Button(action: copyToClipboard) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.background.tertiary)
+        .background(isHovered ? Color.blue.opacity(0.1) : Color(NSColor.tertiarySystemFill))
         .clipShape(RoundedRectangle(cornerRadius: 6))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .onTapGesture {
+            copyToClipboard()
+        }
+        .contextMenu {
+            Button(action: copyToClipboard) {
+                Label("Copy Metric Name", systemImage: "doc.on.doc")
+            }
+        }
+        .help("Click to copy metric name")
+    }
+
+    private func copyToClipboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(name, forType: .string)
+        withAnimation(.spring(response: 0.3)) {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showCopied = false
+            }
+        }
     }
 }
 
@@ -365,6 +410,9 @@ struct SetupStep: View {
     let title: String
     let code: String
 
+    @State private var isHovered = false
+    @State private var showCopied = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -373,15 +421,108 @@ struct SetupStep: View {
                     .foregroundStyle(.blue)
                 Text(title)
                     .font(.subheadline)
+                    .textSelection(.enabled)
             }
 
-            Text(code)
-                .font(.system(.caption, design: .monospaced))
+            HStack(spacing: 0) {
+                // Code block with selectable text
+                Text(code)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Copy button
+                VStack {
+                    Button(action: copyToClipboard) {
+                        Group {
+                            if showCopied {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.green)
+                            } else {
+                                Image(systemName: "doc.on.doc")
+                                    .foregroundStyle(isHovered ? .white : .gray)
+                            }
+                        }
+                        .font(.caption)
+                        .frame(width: 20, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy to clipboard")
+
+                    Spacer()
+                }
                 .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.black.opacity(0.8))
-                .foregroundStyle(.green)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .background(.black.opacity(0.85))
+            .foregroundStyle(.green)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isHovered ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1)
+            )
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
+            }
+            .contextMenu {
+                Button(action: copyToClipboard) {
+                    Label("Copy Command", systemImage: "doc.on.doc")
+                }
+
+                if code.contains("\n") {
+                    Button(action: copyFirstLine) {
+                        Label("Copy First Line", systemImage: "text.line.first.and.arrowtriangle.forward")
+                    }
+
+                    Button(action: copyAllLines) {
+                        Label("Copy as Shell Script", systemImage: "terminal")
+                    }
+                }
+            }
+        }
+    }
+
+    private func copyToClipboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
+        withAnimation(.spring(response: 0.3)) {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showCopied = false
+            }
+        }
+    }
+
+    private func copyFirstLine() {
+        let firstLine = code.components(separatedBy: "\n").first ?? code
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(firstLine, forType: .string)
+        withAnimation(.spring(response: 0.3)) {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showCopied = false
+            }
+        }
+    }
+
+    private func copyAllLines() {
+        // Format as shell script with shebang
+        let script = "#!/bin/bash\n\n" + code
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(script, forType: .string)
+        withAnimation(.spring(response: 0.3)) {
+            showCopied = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showCopied = false
+            }
         }
     }
 }
