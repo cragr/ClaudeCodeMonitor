@@ -7,6 +7,38 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.3.0-beta</title>
+      <pubDate>Thu, 26 Dec 2025 06:10:00 +0000</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.3.0-beta</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.3.0-beta</h2>
+        <h3>New Insights View</h3>
+        <ul>
+          <li>Period comparison cards showing week-over-week and month-over-month changes</li>
+          <li>Sparkline charts for daily activity trends</li>
+          <li>Peak activity metrics: most active hour, longest session, current streak</li>
+        </ul>
+        <h3>Pricing Provider Support</h3>
+        <ul>
+          <li>Configure cost calculations for Anthropic, AWS Bedrock, or Google Vertex AI</li>
+          <li>Pricing provider selection in Settings → General</li>
+        </ul>
+        <h3>Additional Improvements</h3>
+        <ul>
+          <li>Extended time range presets: Last 8 Hours, Last 2 Days</li>
+          <li>UI refinements for charts and period selectors</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.3.0-beta/ClaudeCodeMonitor.dmg"
+        sparkle:edSignature="0VWqFaFm2P5TqQxZ9uNTIyQ7ojx16XS1R7eWTeXJd24G21W9jYBC9viVKHaeK7kK129hpkNj8E0C1k4NZvy7BQ=="
+        length="2910739"
+        type="application/octet-stream"/>
+    </item>
+
+    <item>
       <title>Version 0.2.1-beta</title>
       <pubDate>Thu, 26 Dec 2025 23:00:00 +0000</pubDate>
       <sparkle:version>3</sparkle:version>

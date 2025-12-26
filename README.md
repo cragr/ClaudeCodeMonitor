@@ -1,18 +1,12 @@
 # Claude Code Monitor
 
 <p align="center">
-  <img src="images/icon1.jpg" alt="Claude Code Monitor Icon" width="128">
+  <img src="images/icon1.png" alt="Claude Code Monitor Icon" width="128">
 </p>
 
 A native macOS application for monitoring Claude Code usage via Prometheus telemetry data.
 
-<p align="center">
-  <img src="images/img1.png" alt="Claude Code Monitor Screenshot" width="800">
-</p>
-
-<p align="center">
-  <img src="images/img2.png" alt="Claude Code Monitor Screenshot" width="800">
-</p>
+![](https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/refs/heads/main/images/ccm_demo.gif)
 
 ## Features
 
