@@ -56,6 +56,10 @@ cat > "$BUNDLE_NAME/Contents/Info.plist" << 'EOF'
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string></string>
 </dict>
 </plist>
 EOF

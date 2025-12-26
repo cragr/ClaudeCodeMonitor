@@ -17,14 +17,12 @@ final class SparkleUpdaterService: ObservableObject {
     init() {
         // Initialize with standard UI and start checking for updates
         // startingUpdater: true means it will check on launch
+        // Feed URL is configured via SUFeedURL in Info.plist (set by build-app.sh)
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
-
-        // Configure feed URL programmatically (since we don't use Info.plist)
-        updater.setFeedURL(SparkleConfiguration.feedURL)
     }
 
     /// Manually trigger an update check
