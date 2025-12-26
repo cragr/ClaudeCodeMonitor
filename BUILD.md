@@ -29,7 +29,7 @@ The binary will be at `.build/release/ClaudeCodeMonitor`.
 
 ### Using the Build Script
 
-A convenience script is provided to create a distributable app bundle:
+A convenience script is provided to create distributable archives:
 
 ```bash
 cd macos-app
@@ -37,8 +37,35 @@ cd macos-app
 ```
 
 This creates:
-- `ClaudeCodeMonitor.app` - The app bundle
-- `ClaudeCodeMonitor.zip` - Ready for distribution
+- `ClaudeCodeMonitor.zip` - ZIP archive for distribution
+- `ClaudeCodeMonitor.dmg` - DMG installer (if `create-dmg` is installed)
+
+The script automatically:
+- Builds a release binary
+- Creates a proper app bundle with Info.plist
+- Bundles the Sparkle.framework for auto-updates
+- Signs the app if `DEVELOPER_ID` is set (see below)
+- Creates ZIP and DMG archives
+- Cleans up the intermediate .app bundle
+
+#### Optional: Install create-dmg
+
+For DMG creation with a nice drag-to-Applications layout:
+
+```bash
+brew install create-dmg
+```
+
+#### Optional: Code Signing
+
+To sign the app with your Developer ID:
+
+```bash
+export DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"
+./scripts/build-app.sh
+```
+
+If `DEVELOPER_ID` is not set, the script skips signing (useful for local testing).
 
 ## Running Tests
 
@@ -79,6 +106,37 @@ macos-app/
     └── build-app.sh                # Build script
 ```
 
+## Auto-Updates (Sparkle)
+
+The app includes [Sparkle](https://sparkle-project.org/) for automatic update checking. The build script automatically bundles Sparkle.framework.
+
+### Configuration
+
+The app is configured to check for updates from:
+- Feed URL: `https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/main/appcast.xml`
+
+### Creating a Release with Updates
+
+1. Build and sign the app:
+   ```bash
+   export DEVELOPER_ID="Developer ID Application: Your Name (TEAM_ID)"
+   ./scripts/build-app.sh
+   ```
+
+2. Generate EdDSA signature for the DMG:
+   ```bash
+   # Download Sparkle tools (one-time)
+   curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.5.0/Sparkle-2.5.0.tar.xz
+   tar -xf /tmp/Sparkle.tar.xz -C /tmp
+
+   # Generate signature
+   /tmp/Sparkle-2.5.0/bin/sign_update ClaudeCodeMonitor.dmg
+   ```
+
+3. Update `appcast.xml` with the new version, DMG URL, file size, and EdDSA signature
+
+4. Create a GitHub release with the DMG attached
+
 ## Distributing the App
 
 ### Quick Distribution (No Developer Account)
@@ -103,45 +161,44 @@ For sharing with trusted users without an Apple Developer account:
 
 ### Create a DMG Installer
 
-After creating a release build:
+The build script automatically creates a DMG if `create-dmg` is installed:
 
-1. Using `create-dmg` (prettier DMGs):
-   ```bash
-   # Install create-dmg
-   brew install create-dmg
+```bash
+brew install create-dmg
+./scripts/build-app.sh
+```
 
-   # Create DMG with Applications symlink
-   create-dmg \
-     --volname "Claude Code Monitor" \
-     --window-size 600 400 \
-     --icon-size 100 \
-     --icon "ClaudeCodeMonitor.app" 150 200 \
-     --app-drop-link 450 200 \
-     "ClaudeCodeMonitor.dmg" \
-     "ClaudeCodeMonitor.app"
-   ```
+For manual DMG creation using hdiutil:
 
-2. Or manually using hdiutil:
-   ```bash
-   # Create a folder with the app and Applications alias
-   mkdir -p dmg-contents
-   cp -R ClaudeCodeMonitor.app dmg-contents/
-   ln -s /Applications dmg-contents/Applications
+```bash
+# Create a folder with the app and Applications alias
+mkdir -p dmg-contents
+cp -R ClaudeCodeMonitor.app dmg-contents/
+ln -s /Applications dmg-contents/Applications
 
-   # Create DMG
-   hdiutil create -volname "Claude Code Monitor" \
-     -srcfolder dmg-contents \
-     -ov -format UDZO \
-     ClaudeCodeMonitor.dmg
-   ```
+# Create DMG
+hdiutil create -volname "Claude Code Monitor" \
+  -srcfolder dmg-contents \
+  -ov -format UDZO \
+  ClaudeCodeMonitor.dmg
+```
 
 ## Code Signing and Notarization
 
-For distribution to other users (outside App Store), Apple recommends notarization.
+For distribution to other users (outside App Store), Apple recommends code signing and notarization.
 
 ### Sign with Developer ID
 
-Requires an Apple Developer account ($99/year):
+Requires an Apple Developer account ($99/year).
+
+**Using the build script (recommended):**
+
+```bash
+export DEVELOPER_ID="Developer ID Application: Your Name (TEAM_ID)"
+./scripts/build-app.sh
+```
+
+**Manual signing:**
 
 ```bash
 codesign --deep --force --verify --verbose \
