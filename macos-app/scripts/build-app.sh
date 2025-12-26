@@ -58,9 +58,9 @@ cat > "$BUNDLE_NAME/Contents/Info.plist" << 'EOF'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.0-beta</string>
+    <string>0.3.1-beta</string>
     <key>CFBundleVersion</key>
-    <string>4</string>
+    <string>5</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>
@@ -78,7 +78,7 @@ EOF
 # Code sign if DEVELOPER_ID is set
 if [ -n "$DEVELOPER_ID" ]; then
     echo "Code signing with: $DEVELOPER_ID"
-    codesign --deep --force --option runtime --verify --verbose \
+    sudo codesign --deep --force --option runtime --verify --verbose \
         --sign "$DEVELOPER_ID" \
         "$BUNDLE_NAME"
     echo "  Code signing complete"

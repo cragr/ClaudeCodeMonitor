@@ -7,6 +7,31 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.3.1-beta</title>
+      <pubDate>Thu, 26 Dec 2025 17:55:00 +0000</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>0.3.1-beta</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.3.1-beta</h2>
+        <h3>Universal Binary Support</h3>
+        <ul>
+          <li>Single DMG works on both Intel and Apple Silicon Macs</li>
+          <li>No longer need separate downloads per architecture</li>
+        </ul>
+        <h3>Bug Fix</h3>
+        <ul>
+          <li>Fixed "Past 1 month" time range returning empty values</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.3.1-beta/ClaudeCodeMonitor.dmg"
+        sparkle:edSignature="OF+gP+45/N2xPiy3a7Yz2zG69xDlxxCaEsweZOiAP32JAgCIfe7DURmd1DUpH/OAtvZKcLZYwT+adzjEGki0BQ=="
+        length="3857275"
+        type="application/octet-stream"/>
+    </item>
+
+    <item>
       <title>Version 0.3.0-beta</title>
       <pubDate>Thu, 26 Dec 2025 06:10:00 +0000</pubDate>
       <sparkle:version>4</sparkle:version>
