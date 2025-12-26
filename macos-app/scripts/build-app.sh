@@ -62,6 +62,19 @@ cat > "$BUNDLE_NAME/Contents/Info.plist" << 'EOF'
 </plist>
 EOF
 
+# Code sign if DEVELOPER_ID is set
+if [ -n "$DEVELOPER_ID" ]; then
+    echo "Code signing with: $DEVELOPER_ID"
+    codesign --deep --force --verify --verbose \
+        --sign "$DEVELOPER_ID" \
+        "$BUNDLE_NAME"
+    echo "  Code signing complete"
+else
+    echo "Skipping code signing (DEVELOPER_ID not set)"
+    echo "  Set DEVELOPER_ID env var to sign, e.g.:"
+    echo "  export DEVELOPER_ID=\"Developer ID Application: Your Name (TEAMID)\""
+fi
+
 echo "Creating ZIP archive..."
 zip -r "$APP_NAME.zip" "$BUNDLE_NAME"
 
