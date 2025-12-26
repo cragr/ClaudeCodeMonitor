@@ -9,20 +9,33 @@ final class SparkleUpdaterService: ObservableObject {
     /// The underlying Sparkle updater controller
     private let updaterController: SPUStandardUpdaterController
 
+    /// Published property to track if updater started successfully
+    @Published var updaterStarted = false
+    @Published var startError: String?
+
     /// Access to the SPUUpdater for configuration
     var updater: SPUUpdater {
         updaterController.updater
     }
 
     init() {
-        // Initialize with standard UI and start checking for updates
-        // startingUpdater: true means it will check on launch
+        // Initialize without auto-starting to handle errors gracefully
         // Feed URL is configured via SUFeedURL in Info.plist (set by build-app.sh)
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: false,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
+
+        // Try to start the updater manually
+        do {
+            try updater.start()
+            updaterStarted = true
+            print("Sparkle updater started successfully")
+        } catch {
+            startError = error.localizedDescription
+            print("Sparkle updater failed to start: \(error)")
+        }
     }
 
     /// Manually trigger an update check

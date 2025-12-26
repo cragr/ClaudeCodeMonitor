@@ -16,8 +16,19 @@ echo "Creating app bundle..."
 rm -rf "$BUNDLE_NAME"
 mkdir -p "$BUNDLE_NAME/Contents/MacOS"
 mkdir -p "$BUNDLE_NAME/Contents/Resources"
+mkdir -p "$BUNDLE_NAME/Contents/Frameworks"
 
 cp ".build/release/$APP_NAME" "$BUNDLE_NAME/Contents/MacOS/"
+
+# Copy Sparkle framework
+SPARKLE_FRAMEWORK=".build/arm64-apple-macosx/release/Sparkle.framework"
+if [ -d "$SPARKLE_FRAMEWORK" ]; then
+    cp -R "$SPARKLE_FRAMEWORK" "$BUNDLE_NAME/Contents/Frameworks/"
+    echo "  Sparkle.framework included"
+
+    # Update rpath to find framework in Frameworks directory
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$BUNDLE_NAME/Contents/MacOS/$APP_NAME" 2>/dev/null || true
+fi
 
 # Copy icon if it exists
 if [ -f "$APP_NAME.icns" ]; then
@@ -58,8 +69,6 @@ cat > "$BUNDLE_NAME/Contents/Info.plist" << 'EOF'
     <string>NSApplication</string>
     <key>SUFeedURL</key>
     <string>https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/main/appcast.xml</string>
-    <key>SUPublicEDKey</key>
-    <string></string>
 </dict>
 </plist>
 EOF
