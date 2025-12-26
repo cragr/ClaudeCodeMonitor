@@ -110,7 +110,7 @@ enum TimeRangePreset: String, CaseIterable, Identifiable {
     case last2Days = "2d"
     case last1Week = "1w"
     case last2Weeks = "2w"
-    case last1Month = "1mo"
+    case last1Month = "30d"
     case custom = "custom"
 
     var id: String { rawValue }
@@ -140,7 +140,7 @@ enum TimeRangePreset: String, CaseIterable, Identifiable {
         case .last2Days: return "2d"
         case .last1Week: return "1w"
         case .last2Weeks: return "2w"
-        case .last1Month: return "1mo"
+        case .last1Month: return "30d"
         case .custom: return "custom"
         }
     }

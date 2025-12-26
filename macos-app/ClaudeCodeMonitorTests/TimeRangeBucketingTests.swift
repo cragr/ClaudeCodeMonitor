@@ -110,7 +110,7 @@ final class TimeRangeBucketingTests: XCTestCase {
         XCTAssertEqual(TimeRangePreset.last2Days.promQLRange, "2d")
         XCTAssertEqual(TimeRangePreset.last1Week.promQLRange, "1w")
         XCTAssertEqual(TimeRangePreset.last2Weeks.promQLRange, "2w")
-        XCTAssertEqual(TimeRangePreset.last1Month.promQLRange, "1mo")
+        XCTAssertEqual(TimeRangePreset.last1Month.promQLRange, "30d")
     }
 
     // MARK: - Display Name Tests

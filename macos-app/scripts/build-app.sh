@@ -9,8 +9,8 @@ BUNDLE_NAME="$APP_NAME.app"
 
 cd "$PROJECT_DIR"
 
-echo "Building release version..."
-swift build -c release
+echo "Building universal binary (arm64 + x86_64)..."
+swift build -c release --arch arm64 --arch x86_64
 
 echo "Creating app bundle..."
 rm -rf "$BUNDLE_NAME"
@@ -18,10 +18,10 @@ mkdir -p "$BUNDLE_NAME/Contents/MacOS"
 mkdir -p "$BUNDLE_NAME/Contents/Resources"
 mkdir -p "$BUNDLE_NAME/Contents/Frameworks"
 
-cp ".build/release/$APP_NAME" "$BUNDLE_NAME/Contents/MacOS/"
+cp ".build/apple/Products/Release/$APP_NAME" "$BUNDLE_NAME/Contents/MacOS/"
 
-# Copy Sparkle framework
-SPARKLE_FRAMEWORK=".build/arm64-apple-macosx/release/Sparkle.framework"
+# Copy Sparkle framework (universal build location)
+SPARKLE_FRAMEWORK=".build/apple/Products/Release/Sparkle.framework"
 if [ -d "$SPARKLE_FRAMEWORK" ]; then
     cp -R "$SPARKLE_FRAMEWORK" "$BUNDLE_NAME/Contents/Frameworks/"
     echo "  Sparkle.framework included"
@@ -88,9 +88,6 @@ else
     echo "  export DEVELOPER_ID=\"Developer ID Application: Your Name (TEAMID)\""
 fi
 
-echo "Creating ZIP archive..."
-zip -r "$APP_NAME.zip" "$BUNDLE_NAME"
-
 # Create DMG if create-dmg is available
 if command -v create-dmg &> /dev/null; then
     echo "Creating DMG..."
@@ -116,9 +113,11 @@ rm -rf "$BUNDLE_NAME"
 
 echo ""
 echo "Build complete!"
-echo "  ZIP archive: $PROJECT_DIR/$APP_NAME.zip"
 if [ "$DMG_CREATED" = true ]; then
-    echo "  DMG archive: $PROJECT_DIR/$APP_NAME.dmg"
+    echo "  DMG: $PROJECT_DIR/$APP_NAME.dmg"
+    echo ""
+    echo "To install: Open DMG and drag to /Applications"
+else
+    echo "  App bundle cleaned up (DMG not created)"
+    echo "  Install create-dmg to generate DMG: brew install create-dmg"
 fi
-echo ""
-echo "To install: Open DMG or unzip and drag to /Applications"
