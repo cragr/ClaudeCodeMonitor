@@ -28,6 +28,7 @@ struct ClaudeCodeMonitorApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var settingsManager = SettingsManager()
     @StateObject private var metricsService = MetricsService()
+    @StateObject private var sparkleService = SparkleUpdaterService()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -46,6 +47,14 @@ struct ClaudeCodeMonitorApp: App {
                 Button("About Claude Code Monitor") {
                     NSApp.orderFrontStandardAboutPanel(nil)
                 }
+            }
+
+            // Add Check for Updates after About
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates...") {
+                    sparkleService.checkForUpdates()
+                }
+                .disabled(!sparkleService.canCheckForUpdates)
             }
 
             CommandGroup(replacing: .appSettings) {
@@ -83,6 +92,7 @@ struct ClaudeCodeMonitorApp: App {
         Settings {
             SettingsView()
                 .environmentObject(settingsManager)
+                .environmentObject(sparkleService)
         }
     }
 }
