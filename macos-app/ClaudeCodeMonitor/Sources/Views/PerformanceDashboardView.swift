@@ -197,7 +197,6 @@ struct PerformanceDashboardView: View {
                             )
                             .foregroundStyle(by: .value("Model", modelName))
                             .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                            .interpolationMethod(.catmullRom)
                         }
                     }
                 }

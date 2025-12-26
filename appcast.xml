@@ -7,6 +7,29 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.2.1-beta</title>
+      <pubDate>Thu, 26 Dec 2025 23:00:00 +0000</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>0.2.1-beta</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.2.1-beta</h2>
+        <h3>Bug Fixes</h3>
+        <ul>
+          <li>Fixed chart interpolation: Tokens by Model now uses linear (straight lines) matching other charts</li>
+          <li>Removed duplicate Connected status icon from toolbar</li>
+          <li>Renamed Settings to Preferences in menu bar</li>
+        </ul>
+      ]]></description>
+      <!-- Generate signature with: /tmp/bin/sign_update ClaudeCodeMonitor.dmg -->
+      <enclosure
+        url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.2.1-beta/ClaudeCodeMonitor.dmg"
+        sparkle:edSignature="tavITXu7/QMV4kRL114QXJfLNEmsOwEnxJ/eR8eU1WA90G7aJthoyDAOFPni1rKeRNv/mUl2QM2wA9zW8z6ZAQ=="
+        length="2855459"
+        type="application/octet-stream"/>
+    </item>
+
+    <item>
       <title>Version 0.2.0-beta</title>
       <pubDate>Thu, 26 Dec 2025 02:45:00 +0000</pubDate>
       <sparkle:version>2</sparkle:version>

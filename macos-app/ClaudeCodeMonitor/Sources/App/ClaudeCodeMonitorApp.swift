@@ -58,7 +58,7 @@ struct ClaudeCodeMonitorApp: App {
             }
 
             CommandGroup(replacing: .appSettings) {
-                Button("Settings...") {
+                Button("Preferences...") {
                     appState.showSettings = true
                 }
                 .keyboardShortcut(",", modifiers: .command)

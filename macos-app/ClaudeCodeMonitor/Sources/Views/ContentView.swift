@@ -293,38 +293,34 @@ struct ContentView: View {
             }
         }
 
-        // Trailing: Status and refresh grouped together
+        // Trailing: Refresh button
         ToolbarItem(placement: .primaryAction) {
-            HStack(spacing: Spacing.sm) {
-                TerminalStatusBadge(status: metricsService.connectionStatus)
-
-                Button(action: { Task { await metricsService.refreshDashboard() } }) {
-                    HStack(spacing: Spacing.xs) {
-                        if metricsService.isLoading {
-                            TerminalLoadingIndicator(color: .phosphorCyan)
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                    }
-                    .foregroundStyle(Color.phosphorCyan)
-                    .frame(width: 28, height: 22)
-                    .background {
-                        RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                            .fill(Color.phosphorCyan.opacity(0.1))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                                    .strokeBorder(Color.phosphorCyan.opacity(0.3), lineWidth: 1)
-                            }
+            Button(action: { Task { await metricsService.refreshDashboard() } }) {
+                HStack(spacing: Spacing.xs) {
+                    if metricsService.isLoading {
+                        TerminalLoadingIndicator(color: .phosphorCyan)
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11, weight: .medium))
                     }
                 }
-                .buttonStyle(.plain)
-                .disabled(metricsService.isLoading)
-                .help("Refresh dashboard (⌘R)")
-                .keyboardShortcut("r", modifiers: .command)
-                .accessibilityLabel(metricsService.isLoading ? "Refreshing" : "Refresh dashboard")
+                .foregroundStyle(Color.phosphorCyan)
+                .frame(width: 28, height: 22)
+                .background {
+                    RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                        .fill(Color.phosphorCyan.opacity(0.1))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
+                                .strokeBorder(Color.phosphorCyan.opacity(0.3), lineWidth: 1)
+                        }
+                }
             }
+            .buttonStyle(.plain)
+            .disabled(metricsService.isLoading)
+            .help("Refresh dashboard (⌘R)")
+            .keyboardShortcut("r", modifiers: .command)
+            .accessibilityLabel(metricsService.isLoading ? "Refreshing" : "Refresh dashboard")
         }
     }
 
