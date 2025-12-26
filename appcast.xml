@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Claude Code Monitor Updates</title>
+    <link>https://github.com/cragr/ClaudeCodeMonitor/releases</link>
+    <description>Most recent updates to Claude Code Monitor</description>
+    <language>en</language>
+
+    <item>
+      <title>Version 0.2.0-beta</title>
+      <pubDate>Thu, 26 Dec 2025 02:45:00 +0000</pubDate>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>0.2.0-beta</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.2.0-beta</h2>
+        <h3>Automatic Updates via Sparkle</h3>
+        <ul>
+          <li>Check for Updates menu item</li>
+          <li>Settings → Updates tab with auto-check toggle</li>
+          <li>Sparkle 2.5 integration</li>
+        </ul>
+        <h3>Build Improvements</h3>
+        <ul>
+          <li>DMG creation with drag-to-Applications</li>
+          <li>Code signing via DEVELOPER_ID environment variable</li>
+          <li>Sparkle framework auto-bundled</li>
+        </ul>
+      ]]></description>
+      <!-- Generate signature with: /tmp/bin/sign_update ClaudeCodeMonitor.dmg -->
+      <enclosure
+        url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.2.0-beta/ClaudeCodeMonitor.dmg"
+        sparkle:edSignature="QYzDaa/SRfXhIjCkmHK79n992i3gtD+O1FX7xpzhK6JxSd8gpjE6p+62gLG/SuKYeYS1S9uNvGIfk2lFl4i4DA=="
+        length="2863300"
+        type="application/octet-stream"/>
+    </item>
+
+  </channel>
+</rss>
