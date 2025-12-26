@@ -115,6 +115,32 @@ struct SettingsView: View {
                     .font(.headline)
             }
 
+            GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    LabeledContent("Pricing Provider") {
+                        Picker("", selection: $settingsManager.pricingProviderRaw) {
+                            ForEach(PricingProvider.allCases, id: \.rawValue) { provider in
+                                Text(provider.displayName).tag(provider.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 180)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("API Provider Information")
+                            .font(.caption.weight(.medium))
+                        Text("Select your API provider to calculate accurate costs. AWS Bedrock uses Anthropic pricing. Google Vertex AI has ~10% premium.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } label: {
+                Label("Pricing", systemImage: "dollarsign.circle")
+                    .font(.headline)
+            }
+
             Spacer(minLength: 20)
 
             HStack {
