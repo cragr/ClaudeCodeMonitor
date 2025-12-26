@@ -86,32 +86,9 @@ struct InsightsView: View {
                     Text(period.rawValue).tag(period)
                 }
             }
+            .labelsHidden()
             .pickerStyle(.segmented)
             .frame(width: 280)
-
-            // Pricing Provider
-            Menu {
-                ForEach(PricingProvider.allCases, id: \.self) { provider in
-                    Button(provider.displayName) {
-                        settingsManager.pricingProvider = provider
-                    }
-                }
-            } label: {
-                HStack(spacing: Spacing.xs) {
-                    Text(settingsManager.pricingProvider.displayName)
-                        .font(.terminalCaptionSmall)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 8))
-                }
-                .foregroundStyle(Color.noirTextSecondary)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs)
-                .background {
-                    Capsule()
-                        .strokeBorder(Color.noirStroke, lineWidth: 1)
-                }
-            }
-            .menuStyle(.borderlessButton)
         }
         .padding(Spacing.lg)
         .background {
@@ -365,7 +342,6 @@ struct SparklineCard: View {
                         y: .value("Value", value)
                     )
                     .foregroundStyle(color)
-                    .interpolationMethod(.catmullRom)
 
                     AreaMark(
                         x: .value("Day", index),
@@ -378,7 +354,6 @@ struct SparklineCard: View {
                             endPoint: .bottom
                         )
                     )
-                    .interpolationMethod(.catmullRom)
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis(.hidden)
