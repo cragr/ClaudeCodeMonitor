@@ -30,6 +30,8 @@ cat > "$BUNDLE_NAME/Contents/Info.plist" << 'EOF'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>SUPublicEDKey</key>
+    <string>tgo3e8T4IiQLiNpC2qf/Tdbs5b5Lnw253nZB4oEXcpU=</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
@@ -63,9 +65,34 @@ EOF
 echo "Creating ZIP archive..."
 zip -r "$APP_NAME.zip" "$BUNDLE_NAME"
 
+# Create DMG if create-dmg is available
+if command -v create-dmg &> /dev/null; then
+    echo "Creating DMG..."
+    rm -f "$APP_NAME.dmg"
+    create-dmg \
+        --volname "Claude Code Monitor" \
+        --window-size 600 400 \
+        --icon-size 100 \
+        --icon "$BUNDLE_NAME" 150 200 \
+        --app-drop-link 450 200 \
+        "$APP_NAME.dmg" \
+        "$BUNDLE_NAME"
+    DMG_CREATED=true
+else
+    echo "Skipping DMG creation (create-dmg not installed)"
+    echo "  Install with: brew install create-dmg"
+    DMG_CREATED=false
+fi
+
+# Clean up app bundle (DMG/ZIP contain the app)
+echo "Cleaning up app bundle..."
+rm -rf "$BUNDLE_NAME"
+
 echo ""
 echo "Build complete!"
-echo "  App bundle: $PROJECT_DIR/$BUNDLE_NAME"
 echo "  ZIP archive: $PROJECT_DIR/$APP_NAME.zip"
+if [ "$DMG_CREATED" = true ]; then
+    echo "  DMG archive: $PROJECT_DIR/$APP_NAME.dmg"
+fi
 echo ""
-echo "To install: Unzip and drag $BUNDLE_NAME to /Applications"
+echo "To install: Open DMG or unzip and drag to /Applications"
