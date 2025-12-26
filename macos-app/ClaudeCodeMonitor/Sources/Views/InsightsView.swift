@@ -177,7 +177,7 @@ struct InsightsView: View {
 
                 ComparisonCard(
                     title: "Est. Cost",
-                    value: Int(stats.totalCost * 100), // cents for display
+                    value: Int(stats.totalCost(using: settingsManager.pricingProvider) * 100), // cents for display
                     change: nil, // Would need cost history
                     icon: "dollarsign.circle.fill",
                     color: .phosphorGreen,

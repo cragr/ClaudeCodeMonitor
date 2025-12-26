@@ -21,8 +21,13 @@ struct StatsCache: Codable {
     }
 
     var totalCost: Double {
+        totalCost(using: .anthropic)
+    }
+
+    /// Calculate total cost using the specified pricing provider
+    func totalCost(using provider: PricingProvider) -> Double {
         modelUsage.reduce(0.0) { total, entry in
-            total + entry.value.estimatedCost(for: entry.key)
+            total + entry.value.estimatedCost(for: entry.key, provider: provider)
         }
     }
 
@@ -114,49 +119,19 @@ struct ModelUsage: Codable {
         inputTokens + outputTokens + cacheCreationInputTokens
     }
 
-    // Estimate cost based on model pricing (per 1M tokens)
-    // Claude 4.5 Opus: $5 (Input) / $25 (Output)
-    // Claude 4.5 Sonnet: $3 (Input) / $15 (Output)
-    // Claude 4.5 Haiku: $1 (Input) / $5 (Output)
-    // Claude 4.1 Opus: $15 (Input) / $75 (Output)
-    // Claude 3.5 Sonnet: $3 (Input) / $15 (Output)
-    // Claude 3.5 Haiku: $0.80 (Input) / $4 (Output)
-    // Cache reads are 90% cheaper, cache writes are 25% more expensive
-    func estimatedCost(for modelName: String) -> Double {
-        let pricing: (input: Double, output: Double, cacheRead: Double, cacheWrite: Double)
-
-        if modelName.contains("opus-4-5") || modelName.contains("opus-4.5") {
-            // Claude 4.5 Opus
-            pricing = (input: 5.0, output: 25.0, cacheRead: 0.5, cacheWrite: 6.25)
-        } else if modelName.contains("opus-4-1") || modelName.contains("opus-4.1") || modelName.contains("opus-4-0") {
-            // Claude 4.1/4.0 Opus
-            pricing = (input: 15.0, output: 75.0, cacheRead: 1.5, cacheWrite: 18.75)
-        } else if modelName.contains("opus") {
-            // Default Opus (assume 4.1)
-            pricing = (input: 15.0, output: 75.0, cacheRead: 1.5, cacheWrite: 18.75)
-        } else if modelName.contains("sonnet-4-5") || modelName.contains("sonnet-4.5") {
-            // Claude 4.5 Sonnet
-            pricing = (input: 3.0, output: 15.0, cacheRead: 0.3, cacheWrite: 3.75)
-        } else if modelName.contains("sonnet-3-5") || modelName.contains("sonnet-3.5") || modelName.contains("sonnet") {
-            // Claude 3.5 Sonnet (or default Sonnet)
-            pricing = (input: 3.0, output: 15.0, cacheRead: 0.3, cacheWrite: 3.75)
-        } else if modelName.contains("haiku-4-5") || modelName.contains("haiku-4.5") {
-            // Claude 4.5 Haiku
-            pricing = (input: 1.0, output: 5.0, cacheRead: 0.1, cacheWrite: 1.25)
-        } else if modelName.contains("haiku-3-5") || modelName.contains("haiku-3.5") || modelName.contains("haiku") {
-            // Claude 3.5 Haiku (or default Haiku)
-            pricing = (input: 0.80, output: 4.0, cacheRead: 0.08, cacheWrite: 1.0)
-        } else {
-            // Default to Sonnet pricing
-            pricing = (input: 3.0, output: 15.0, cacheRead: 0.3, cacheWrite: 3.75)
-        }
-
-        let inputCost = Double(inputTokens) / 1_000_000 * pricing.input
-        let outputCost = Double(outputTokens) / 1_000_000 * pricing.output
-        let cacheReadCost = Double(cacheReadInputTokens) / 1_000_000 * pricing.cacheRead
-        let cacheWriteCost = Double(cacheCreationInputTokens) / 1_000_000 * pricing.cacheWrite
-
-        return inputCost + outputCost + cacheReadCost + cacheWriteCost
+    /// Estimate cost based on model pricing using the specified provider
+    /// - Parameters:
+    ///   - modelName: The model identifier (e.g., "claude-opus-4-5")
+    ///   - provider: The pricing provider to use (default: Anthropic)
+    /// - Returns: Estimated cost in USD
+    func estimatedCost(for modelName: String, provider: PricingProvider = .anthropic) -> Double {
+        provider.calculateCost(
+            model: modelName,
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            cacheReadTokens: cacheReadInputTokens,
+            cacheWriteTokens: cacheCreationInputTokens
+        )
     }
 }
 

@@ -6,6 +6,7 @@ import Charts
 
 struct StatsCacheView: View {
     @StateObject private var loader = StatsCacheLoader()
+    @EnvironmentObject var settingsManager: SettingsManager
     @State private var appearAnimation = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -275,7 +276,7 @@ struct StatsCacheView: View {
 
                 TerminalMetricCard(
                     title: "Est. Cost",
-                    value: NumberFormatting.cost(stats.totalCost),
+                    value: NumberFormatting.cost(stats.totalCost(using: settingsManager.pricingProvider)),
                     icon: "dollarsign.circle.fill",
                     color: .phosphorGreen
                 )
