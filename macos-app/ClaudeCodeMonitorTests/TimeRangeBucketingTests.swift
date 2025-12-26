@@ -15,8 +15,10 @@ final class TimeRangeBucketingTests: XCTestCase {
         let presets = TimeRangePreset.allCases
         XCTAssertTrue(presets.contains(.last15Minutes))
         XCTAssertTrue(presets.contains(.last1Hour))
+        XCTAssertTrue(presets.contains(.last8Hours))
         XCTAssertTrue(presets.contains(.last12Hours))
         XCTAssertTrue(presets.contains(.last1Day))
+        XCTAssertTrue(presets.contains(.last2Days))
         XCTAssertTrue(presets.contains(.last1Week))
         XCTAssertTrue(presets.contains(.last2Weeks))
         XCTAssertTrue(presets.contains(.last1Month))
@@ -102,8 +104,10 @@ final class TimeRangeBucketingTests: XCTestCase {
     func testPromQLRangeStrings() {
         XCTAssertEqual(TimeRangePreset.last15Minutes.promQLRange, "15m")
         XCTAssertEqual(TimeRangePreset.last1Hour.promQLRange, "1h")
+        XCTAssertEqual(TimeRangePreset.last8Hours.promQLRange, "8h")
         XCTAssertEqual(TimeRangePreset.last12Hours.promQLRange, "12h")
         XCTAssertEqual(TimeRangePreset.last1Day.promQLRange, "1d")
+        XCTAssertEqual(TimeRangePreset.last2Days.promQLRange, "2d")
         XCTAssertEqual(TimeRangePreset.last1Week.promQLRange, "1w")
         XCTAssertEqual(TimeRangePreset.last2Weeks.promQLRange, "2w")
         XCTAssertEqual(TimeRangePreset.last1Month.promQLRange, "1mo")
@@ -114,8 +118,10 @@ final class TimeRangeBucketingTests: XCTestCase {
     func testDisplayNames() {
         XCTAssertEqual(TimeRangePreset.last15Minutes.displayName, "Past 15 minutes")
         XCTAssertEqual(TimeRangePreset.last1Hour.displayName, "Past 1 hour")
+        XCTAssertEqual(TimeRangePreset.last8Hours.displayName, "Past 8 hours")
         XCTAssertEqual(TimeRangePreset.last12Hours.displayName, "Past 12 hours")
         XCTAssertEqual(TimeRangePreset.last1Day.displayName, "Past 1 day")
+        XCTAssertEqual(TimeRangePreset.last2Days.displayName, "Past 2 days")
         XCTAssertEqual(TimeRangePreset.last1Week.displayName, "Past 1 week")
         XCTAssertEqual(TimeRangePreset.last2Weeks.displayName, "Past 2 weeks")
         XCTAssertEqual(TimeRangePreset.last1Month.displayName, "Past 1 month")
@@ -221,6 +227,45 @@ final class TimeRangeBucketingTests: XCTestCase {
         // 1 month / 1 day step = 30 data points (reasonable)
         let dataPoints = TimeRangePreset.last1Month.duration / TimeRangePreset.last1Month.recommendedStep
         XCTAssertEqual(dataPoints, 30)
+        XCTAssertLessThanOrEqual(dataPoints, 100, "Should not oversample")
+    }
+
+    // MARK: - New Presets (Task 2)
+
+    func testLast8HoursDuration() {
+        XCTAssertEqual(TimeRangePreset.last8Hours.duration, 8 * 3600)
+    }
+
+    func testLast8HoursUses5MinuteBuckets() {
+        XCTAssertEqual(TimeRangePreset.last8Hours.recommendedStep, 300)
+        XCTAssertEqual(TimeRangePreset.last8Hours.bucketGranularity, .minutes)
+    }
+
+    func testLast2DaysDuration() {
+        XCTAssertEqual(TimeRangePreset.last2Days.duration, 2 * 24 * 3600)
+    }
+
+    func testLast2DaysUsesHourBuckets() {
+        XCTAssertEqual(TimeRangePreset.last2Days.recommendedStep, 3600)
+        XCTAssertEqual(TimeRangePreset.last2Days.bucketGranularity, .hours)
+    }
+
+    func testNewPresetsDisplayNames() {
+        XCTAssertEqual(TimeRangePreset.last8Hours.displayName, "Past 8 hours")
+        XCTAssertEqual(TimeRangePreset.last2Days.displayName, "Past 2 days")
+    }
+
+    func testNoOversamplingFor8Hours() {
+        // 8 hours / 5 minute step = 96 data points
+        let dataPoints = TimeRangePreset.last8Hours.duration / TimeRangePreset.last8Hours.recommendedStep
+        XCTAssertEqual(dataPoints, 96)
+        XCTAssertLessThanOrEqual(dataPoints, 100, "Should not oversample")
+    }
+
+    func testNoOversamplingFor2Days() {
+        // 2 days / 1 hour step = 48 data points
+        let dataPoints = TimeRangePreset.last2Days.duration / TimeRangePreset.last2Days.recommendedStep
+        XCTAssertEqual(dataPoints, 48)
         XCTAssertLessThanOrEqual(dataPoints, 100, "Should not oversample")
     }
 }
