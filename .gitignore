@@ -52,3 +52,6 @@ build/
 
 # Crash logs
 *.crash
+
+# Worktrees
+.worktrees/
