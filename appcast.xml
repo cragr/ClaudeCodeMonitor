@@ -30,8 +30,8 @@
       <!-- Generate signature with: /tmp/bin/sign_update ClaudeCodeMonitor.dmg -->
       <enclosure
         url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.2.0-beta/ClaudeCodeMonitor.dmg"
-        sparkle:edSignature="QYzDaa/SRfXhIjCkmHK79n992i3gtD+O1FX7xpzhK6JxSd8gpjE6p+62gLG/SuKYeYS1S9uNvGIfk2lFl4i4DA=="
-        length="2863300"
+        sparkle:edSignature="Myrog8wPAxDtJelPy1cLlPlMnVE2YRe9AJ/gTU8q23TkkAczysCjElnrfMaEUaVjC9qe52ThyZQ1sD9Kb3A/DA=="
+        length="2865228"
         type="application/octet-stream"/>
     </item>
 
