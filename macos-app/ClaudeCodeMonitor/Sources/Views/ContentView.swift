@@ -11,6 +11,7 @@ struct ContentView: View {
     enum DashboardTab: String, CaseIterable, Identifiable {
         case summary = "Summary"
         case tokenMetrics = "Token Metrics"
+        case insights = "Insights"
         case localStatsCache = "Local Stats Cache"
         case smokeTest = "Smoke Test"
 
@@ -20,6 +21,7 @@ struct ContentView: View {
             switch self {
             case .summary: return "Overview of key metrics and costs"
             case .tokenMetrics: return "Token usage and model performance"
+            case .insights: return "Usage trends and comparisons"
             case .localStatsCache: return "Local Claude Code usage statistics"
             case .smokeTest: return "Debug and test connectivity"
             }
@@ -29,8 +31,9 @@ struct ContentView: View {
             switch self {
             case .summary: return "1"
             case .tokenMetrics: return "2"
-            case .localStatsCache: return "3"
-            case .smokeTest: return "4"
+            case .insights: return "3"
+            case .localStatsCache: return "4"
+            case .smokeTest: return "5"
             }
         }
 
@@ -38,8 +41,9 @@ struct ContentView: View {
             switch self {
             case .summary: return "1"
             case .tokenMetrics: return "2"
-            case .localStatsCache: return "3"
-            case .smokeTest: return "4"
+            case .insights: return "3"
+            case .localStatsCache: return "4"
+            case .smokeTest: return "5"
             }
         }
     }
@@ -77,7 +81,7 @@ struct ContentView: View {
     }
 
     private var navigationSubtitle: String {
-        if selectedTab == .localStatsCache || selectedTab == .smokeTest {
+        if selectedTab == .localStatsCache || selectedTab == .smokeTest || selectedTab == .insights {
             return ""
         }
         if metricsService.connectionStatus.isConnected {
@@ -256,6 +260,8 @@ struct ContentView: View {
                 SummaryDashboardView(metricsService: metricsService)
             case .tokenMetrics:
                 PerformanceDashboardView(metricsService: metricsService)
+            case .insights:
+                InsightsView()
             case .localStatsCache:
                 StatsCacheView()
             case .smokeTest:
@@ -336,6 +342,7 @@ struct ContentView: View {
         switch tab {
         case .summary: return "square.grid.2x2"
         case .tokenMetrics: return "waveform.path.ecg"
+        case .insights: return "lightbulb.fill"
         case .localStatsCache: return "internaldrive"
         case .smokeTest: return "stethoscope"
         }
@@ -345,6 +352,7 @@ struct ContentView: View {
         switch tab {
         case .summary: return .phosphorGreen
         case .tokenMetrics: return .phosphorCyan
+        case .insights: return .phosphorAmber
         case .localStatsCache: return .phosphorPurple
         case .smokeTest: return .noirTextTertiary
         }
