@@ -22,6 +22,9 @@ final class SparkleUpdaterService: ObservableObject {
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
+
+        // Configure feed URL programmatically (since we don't use Info.plist)
+        updater.setFeedURL(SparkleConfiguration.feedURL)
     }
 
     /// Manually trigger an update check
