@@ -2,12 +2,13 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @EnvironmentObject var sparkleService: SparkleUpdaterService
     @State private var testingConnection = false
     @State private var connectionTestResult: String?
     @State private var selectedTab = SettingsTab.general
 
     enum SettingsTab {
-        case general, connection, filters
+        case general, connection, filters, updates
     }
 
     var body: some View {
@@ -29,6 +30,12 @@ struct SettingsView: View {
                     Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 .tag(SettingsTab.filters)
+
+            updatesSettings
+                .tabItem {
+                    Label("Updates", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .tag(SettingsTab.updates)
         }
         .frame(minWidth: 480, idealWidth: 540, maxWidth: 600,
                minHeight: 400, idealHeight: 480, maxHeight: .infinity)
@@ -273,6 +280,78 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.blue.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            Spacer()
+        }
+        .formStyle(.grouped)
+        .padding(20)
+    }
+
+    // MARK: - Updates Settings
+
+    private var updatesSettings: some View {
+        Form {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 16) {
+                    Toggle(isOn: Binding(
+                        get: { sparkleService.automaticallyChecksForUpdates },
+                        set: { sparkleService.automaticallyChecksForUpdates = $0 }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Check for Updates Automatically")
+                            Text("Checks for updates when the app launches")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+
+                    Divider()
+
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            sparkleService.checkForUpdates()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("Check Now")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .disabled(!sparkleService.canCheckForUpdates)
+
+                        Spacer()
+
+                        if let lastCheck = sparkleService.lastUpdateCheckDate {
+                            Text("Last checked: \(lastCheck, style: .relative) ago")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } label: {
+                Label("Automatic Updates", systemImage: "arrow.triangle.2.circlepath.circle")
+                    .font(.headline)
+            }
+
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                        Text("How Updates Work")
+                            .font(.caption.weight(.medium))
+                    }
+                    Text("When an update is available, you'll see a notification with release notes. You can choose when to download and install.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(4)
+            } label: {
+                Label("Information", systemImage: "questionmark.circle")
+                    .font(.headline)
+            }
 
             Spacer()
         }
