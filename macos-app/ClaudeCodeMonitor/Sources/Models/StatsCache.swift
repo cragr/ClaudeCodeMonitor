@@ -241,3 +241,117 @@ class StatsCacheLoader: ObservableObject {
         cacheFilePath
     }
 }
+
+// MARK: - Period Comparison
+
+struct PeriodComparison {
+    let currentMessages: Int
+    let previousMessages: Int
+    let currentSessions: Int
+    let previousSessions: Int
+    let currentTokens: Int
+    let previousTokens: Int
+
+    var messagesChange: Double? {
+        PeriodComparison.percentageChange(from: previousMessages, to: currentMessages)
+    }
+
+    var sessionsChange: Double? {
+        PeriodComparison.percentageChange(from: previousSessions, to: currentSessions)
+    }
+
+    var tokensChange: Double? {
+        PeriodComparison.percentageChange(from: previousTokens, to: currentTokens)
+    }
+
+    static func percentageChange(from previous: Int, to current: Int) -> Double? {
+        guard previous > 0 else { return nil }
+        return Double(current - previous) / Double(previous) * 100
+    }
+}
+
+extension StatsCache {
+
+    func weekOverWeekComparison() -> PeriodComparison? {
+        periodComparison(currentDays: 7, previousDays: 7)
+    }
+
+    func monthOverMonthComparison() -> PeriodComparison? {
+        periodComparison(currentDays: 30, previousDays: 30)
+    }
+
+    func periodComparison(currentDays: Int, previousDays: Int) -> PeriodComparison? {
+        let today = Date()
+        let calendar = Calendar.current
+
+        // Current period
+        guard let currentStart = calendar.date(byAdding: .day, value: -currentDays, to: today),
+              let previousStart = calendar.date(byAdding: .day, value: -(currentDays + previousDays), to: today),
+              let previousEnd = calendar.date(byAdding: .day, value: -currentDays - 1, to: today) else {
+            return nil
+        }
+
+        let currentActivities = dailyActivity.filter { activity in
+            guard let date = activity.parsedDate else { return false }
+            return date >= currentStart && date <= today
+        }
+
+        // Previous period
+        let previousActivities = dailyActivity.filter { activity in
+            guard let date = activity.parsedDate else { return false }
+            return date >= previousStart && date <= previousEnd
+        }
+
+        let currentMessages = currentActivities.reduce(0) { $0 + $1.messageCount }
+        let previousMessages = previousActivities.reduce(0) { $0 + $1.messageCount }
+        let currentSessions = currentActivities.reduce(0) { $0 + $1.sessionCount }
+        let previousSessions = previousActivities.reduce(0) { $0 + $1.sessionCount }
+
+        // Tokens from dailyModelTokens
+        let currentTokens = dailyModelTokens.filter { tokens in
+            guard let date = tokens.parsedDate else { return false }
+            return date >= currentStart && date <= today
+        }.reduce(0) { $0 + $1.totalTokens }
+
+        let previousTokens = dailyModelTokens.filter { tokens in
+            guard let date = tokens.parsedDate else { return false }
+            return date >= previousStart && date <= previousEnd
+        }.reduce(0) { $0 + $1.totalTokens }
+
+        return PeriodComparison(
+            currentMessages: currentMessages,
+            previousMessages: previousMessages,
+            currentSessions: currentSessions,
+            previousSessions: previousSessions,
+            currentTokens: currentTokens,
+            previousTokens: previousTokens
+        )
+    }
+
+    func currentStreak() -> Int {
+        let today = Date()
+        let calendar = Calendar.current
+
+        let sortedDates = dailyActivity
+            .compactMap { $0.parsedDate }
+            .sorted(by: >)
+
+        guard !sortedDates.isEmpty else { return 0 }
+
+        var streak = 0
+        var checkDate = today
+
+        for date in sortedDates {
+            let daysDiff = calendar.dateComponents([.day], from: date, to: checkDate).day ?? 0
+
+            if daysDiff <= 1 {
+                streak += 1
+                checkDate = date
+            } else {
+                break
+            }
+        }
+
+        return streak
+    }
+}
