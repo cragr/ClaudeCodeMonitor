@@ -11,6 +11,7 @@ class SettingsManager: ObservableObject {
     @AppStorage("appVersionFilter") var appVersionFilter: String = ""
     @AppStorage("showMenuBarCost") var showMenuBarCost: Bool = true
     @AppStorage("showMenuBarTokens") var showMenuBarTokens: Bool = true
+    @AppStorage("pricingProvider") var pricingProviderRaw: String = PricingProvider.anthropic.rawValue
 
     var prometheusURL: URL? {
         URL(string: prometheusBaseURLString)
@@ -19,6 +20,11 @@ class SettingsManager: ObservableObject {
     var defaultTimeRange: TimeRangePreset {
         get { TimeRangePreset(rawValue: defaultTimeRangeRaw) ?? .last15Minutes }
         set { defaultTimeRangeRaw = newValue.rawValue }
+    }
+
+    var pricingProvider: PricingProvider {
+        get { PricingProvider(rawValue: pricingProviderRaw) ?? .anthropic }
+        set { pricingProviderRaw = newValue.rawValue }
     }
 
     var activeFilters: [String: String] {
@@ -44,5 +50,6 @@ class SettingsManager: ObservableObject {
         appVersionFilter = ""
         showMenuBarCost = true
         showMenuBarTokens = true
+        pricingProviderRaw = PricingProvider.anthropic.rawValue
     }
 }
