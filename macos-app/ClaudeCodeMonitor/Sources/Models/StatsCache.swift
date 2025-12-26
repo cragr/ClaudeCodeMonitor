@@ -167,8 +167,8 @@ struct LongestSession: Codable {
     let timestamp: String
 
     var formattedDuration: String {
-        // Duration appears to be in microseconds based on typical session lengths
-        let totalSeconds = duration / 1_000_000
+        // Duration is stored in milliseconds
+        let totalSeconds = duration / 1_000
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
