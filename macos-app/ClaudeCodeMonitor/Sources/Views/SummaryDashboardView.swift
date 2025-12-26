@@ -247,7 +247,7 @@ struct SummaryDashboardView: View {
     private var sortedModelNames: [String] {
         metricsService.dashboardData.costByModel
             .sorted { $0.value > $1.value }
-            .map { shortModelName($0.key) }
+            .map { ModelFormatting.shortName($0.key) }
     }
 
     private var modelBreakdownContent: some View {
@@ -262,7 +262,7 @@ struct SummaryDashboardView: View {
                     outerRadius: .ratio(0.95),
                     angularInset: 3
                 )
-                .foregroundStyle(colorForModel(shortModelName(item.key), in: sortedModels))
+                .foregroundStyle(ModelFormatting.color(for: ModelFormatting.shortName(item.key), in: sortedModels))
                 .cornerRadius(4)
             }
             .chartBackground { _ in
@@ -283,9 +283,9 @@ struct SummaryDashboardView: View {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 ForEach(Array(metricsService.dashboardData.costByModel.sorted { $0.value > $1.value }), id: \.key) { item in
                     TerminalModelCostRow(
-                        modelName: shortModelName(item.key),
+                        modelName: ModelFormatting.shortName(item.key),
                         cost: item.value,
-                        color: colorForModel(shortModelName(item.key), in: sortedModels),
+                        color: ModelFormatting.color(for: ModelFormatting.shortName(item.key), in: sortedModels),
                         percentage: item.value / max(metricsService.dashboardData.totalCost, 0.01)
                     )
                 }
@@ -350,71 +350,6 @@ struct SummaryDashboardView: View {
 
     // MARK: - Helpers
 
-    private func shortModelName(_ fullName: String) -> String {
-        if fullName.contains("opus-4-5") || fullName.contains("opus-4.5") {
-            return "Opus 4.5"
-        } else if fullName.contains("opus-4-1") || fullName.contains("opus-4.1") || fullName.contains("opus-4-0") {
-            return "Opus 4.1"
-        } else if fullName.contains("opus") {
-            return "Opus"
-        } else if fullName.contains("sonnet-4-5") || fullName.contains("sonnet-4.5") {
-            return "Sonnet 4.5"
-        } else if fullName.contains("sonnet-4-0") || fullName.contains("sonnet-4.0") {
-            return "Sonnet 4.0"
-        } else if fullName.contains("sonnet-3-5") || fullName.contains("sonnet-3.5") {
-            return "Sonnet 3.5"
-        } else if fullName.contains("sonnet") {
-            return "Sonnet"
-        } else if fullName.contains("haiku-4-5") || fullName.contains("haiku-4.5") {
-            return "Haiku 4.5"
-        } else if fullName.contains("haiku-3-5") || fullName.contains("haiku-3.5") {
-            return "Haiku 3.5"
-        } else if fullName.contains("haiku") {
-            return "Haiku"
-        }
-        let parts = fullName.split(separator: "-")
-        if parts.count > 1 {
-            return String(parts.prefix(2).joined(separator: "-"))
-        }
-        return fullName
-    }
-
-    // Color palette for distinct model colors in charts
-    private let modelColorPalette: [Color] = [
-        .phosphorPurple,
-        .phosphorCyan,
-        .phosphorGreen,
-        .phosphorAmber,
-        .phosphorMagenta,
-        .phosphorOrange,
-        .phosphorRed,
-        Color(red: 0.4, green: 0.8, blue: 0.9),  // Light cyan
-        Color(red: 0.9, green: 0.6, blue: 0.8),  // Pink
-        Color(red: 0.6, green: 0.9, blue: 0.7),  // Mint
-    ]
-
-    private func colorForModel(_ modelName: String, in models: [String]) -> Color {
-        // Get the index of this model in the sorted list to assign a unique color
-        if let index = models.firstIndex(of: modelName) {
-            return modelColorPalette[index % modelColorPalette.count]
-        }
-        return .noirTextSecondary
-    }
-
-    private func colorForModel(_ modelName: String) -> Color {
-        // Fallback for legacy calls - use model family-based colors
-        switch modelName.lowercased() {
-        case let name where name.contains("opus"):
-            return .phosphorPurple
-        case let name where name.contains("sonnet"):
-            return .phosphorCyan
-        case let name where name.contains("haiku"):
-            return .phosphorGreen
-        default:
-            return .noirTextSecondary
-        }
-    }
-
     private func calculateCumulativeCost(_ series: [MetricDataPoint], targetTotal: Double) -> [MetricDataPoint] {
         guard !series.isEmpty else { return [] }
 
@@ -477,310 +412,9 @@ struct SummaryDashboardView: View {
 
     private func exportModelCostData() {
         let data = metricsService.dashboardData.costByModel.map {
-            (shortModelName($0.key), DashboardData.formatCost($0.value))
+            (ModelFormatting.shortName($0.key), DashboardData.formatCost($0.value))
         }
         ChartExportManager.exportToCSV(title: "Cost_by_Model", data: data)
-    }
-}
-
-// MARK: - Terminal Line Chart
-
-struct TerminalLineChart: View {
-    let data: [MetricDataPoint]
-    let color: Color
-    let valueFormatter: (Double) -> String
-
-    @State private var selectedPoint: MetricDataPoint?
-    @State private var tooltipPosition: CGPoint = .zero
-    @State private var showTooltip = false
-
-    var body: some View {
-        Chart(data) { point in
-            // Line
-            LineMark(
-                x: .value("Time", point.timestamp),
-                y: .value("Value", point.value)
-            )
-            .foregroundStyle(color)
-            .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-
-            // Area fill with gradient
-            AreaMark(
-                x: .value("Time", point.timestamp),
-                y: .value("Value", point.value)
-            )
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [color.opacity(0.25), color.opacity(0.05), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            // Selection indicator
-            if let selected = selectedPoint, selected.id == point.id {
-                RuleMark(x: .value("Selected", selected.timestamp))
-                    .foregroundStyle(color.opacity(0.4))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-
-                PointMark(
-                    x: .value("Time", selected.timestamp),
-                    y: .value("Value", selected.value)
-                )
-                .foregroundStyle(color)
-                .symbolSize(60)
-            }
-        }
-        .chartXAxis {
-            AxisMarks(values: .automatic) { _ in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.noirStroke)
-                AxisValueLabel()
-                    .font(.terminalDataSmall)
-                    .foregroundStyle(Color.noirTextTertiary)
-            }
-        }
-        .chartYAxis {
-            AxisMarks { value in
-                AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                    .foregroundStyle(Color.noirStroke)
-                AxisValueLabel {
-                    if let val = value.as(Double.self) {
-                        Text(valueFormatter(val))
-                            .font(.terminalDataSmall)
-                            .foregroundStyle(Color.noirTextTertiary)
-                    }
-                }
-            }
-        }
-        .chartPlotStyle { content in
-            content
-                .background(Color.noirBackground.opacity(0.3))
-        }
-        .frame(height: 200)
-        .chartOverlay { proxy in
-            GeometryReader { geometry in
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                updateSelection(at: value.location, proxy: proxy, geometry: geometry)
-                            }
-                            .onEnded { _ in
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    selectedPoint = nil
-                                    showTooltip = false
-                                }
-                            }
-                    )
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case .active(let location):
-                            updateSelection(at: location, proxy: proxy, geometry: geometry)
-                        case .ended:
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                selectedPoint = nil
-                                showTooltip = false
-                            }
-                        }
-                    }
-            }
-        }
-        .overlay(alignment: .topLeading) {
-            if showTooltip, let point = selectedPoint {
-                TerminalChartTooltip(
-                    title: formatDate(point.timestamp),
-                    value: valueFormatter(point.value),
-                    color: color
-                )
-                .offset(x: max(10, min(tooltipPosition.x - 60, 200)), y: max(10, tooltipPosition.y - 70))
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-        }
-    }
-
-    private func updateSelection(at location: CGPoint, proxy: ChartProxy, geometry: GeometryProxy) {
-        guard let plotFrame = proxy.plotFrame else { return }
-        let xPosition = location.x - geometry[plotFrame].origin.x
-
-        if let date: Date = proxy.value(atX: xPosition) {
-            let closest = data.min(by: { abs($0.timestamp.timeIntervalSince(date)) < abs($1.timestamp.timeIntervalSince(date)) })
-
-            withAnimation(.easeOut(duration: 0.1)) {
-                selectedPoint = closest
-                tooltipPosition = location
-                showTooltip = true
-            }
-        }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
-
-// MARK: - Terminal Chart Tooltip
-
-struct TerminalChartTooltip: View {
-    let title: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(title)
-                .font(.terminalCaptionSmall)
-                .foregroundStyle(Color.noirTextTertiary)
-
-            HStack(spacing: Spacing.xs) {
-                Circle()
-                    .fill(color)
-                    .frame(width: 6, height: 6)
-                    .phosphorGlow(color, intensity: 0.6, isActive: true)
-
-                Text(value)
-                    .font(.terminalData)
-                    .foregroundStyle(Color.noirTextPrimary)
-            }
-        }
-        .padding(Spacing.sm)
-        .background {
-            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                .fill(Color.noirElevated)
-                .overlay {
-                    RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                        .strokeBorder(color.opacity(0.3), lineWidth: 1)
-                }
-        }
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-    }
-}
-
-// MARK: - Terminal Model Cost Row
-
-struct TerminalModelCostRow: View {
-    let modelName: String
-    let cost: Double
-    let color: Color
-    let percentage: Double
-
-    @State private var isHovered = false
-    @State private var showCopied = false
-
-    var body: some View {
-        VStack(spacing: Spacing.xs) {
-            HStack {
-                HStack(spacing: Spacing.sm) {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 8, height: 8)
-                        .phosphorGlow(color, intensity: 0.5, isActive: isHovered)
-
-                    Text(modelName)
-                        .font(.terminalCaption)
-                        .foregroundStyle(Color.noirTextSecondary)
-                }
-
-                Spacer()
-
-                if showCopied {
-                    Text("COPIED")
-                        .font(.terminalCaptionSmall)
-                        .foregroundStyle(Color.phosphorGreen)
-                        .transition(.opacity)
-                } else {
-                    Text(DashboardData.formatCost(cost))
-                        .font(.terminalData)
-                        .foregroundStyle(isHovered ? color : Color.noirTextPrimary)
-                        .phosphorGlow(color, intensity: 0.3, isActive: isHovered)
-                }
-            }
-
-            // Percentage bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.noirStroke)
-                        .frame(height: 3)
-
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(color.opacity(isHovered ? 1 : 0.7))
-                        .frame(width: geometry.size.width * min(1.0, percentage), height: 3)
-                        .phosphorGlow(color, intensity: 0.3, isActive: isHovered)
-                }
-            }
-            .frame(height: 3)
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(isHovered ? color.opacity(0.08) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous))
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
-        }
-        .onTapGesture {
-            copyToClipboard()
-        }
-        .contextMenu {
-            Button(action: copyToClipboard) {
-                Label("Copy Cost", systemImage: "doc.on.doc")
-            }
-            Button(action: copyWithModel) {
-                Label("Copy with Model Name", systemImage: "doc.on.doc.fill")
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(modelName): \(DashboardData.formatCost(cost))")
-    }
-
-    private func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(DashboardData.formatCost(cost), forType: .string)
-        withAnimation { showCopied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            withAnimation { showCopied = false }
-        }
-    }
-
-    private func copyWithModel() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString("\(modelName): \(DashboardData.formatCost(cost))", forType: .string)
-        withAnimation { showCopied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            withAnimation { showCopied = false }
-        }
-    }
-}
-
-// MARK: - Legacy Components (kept for compatibility)
-
-struct ModernKPICard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    @State private var isHovered = false
-
-    var body: some View {
-        TerminalMetricCard(title: title, value: value, icon: icon, color: color)
-    }
-}
-
-struct ModernChartCard<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        TerminalChartCard(title: title, subtitle: nil, onExport: nil) {
-            content
-        }
     }
 }
 

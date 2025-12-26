@@ -4,6 +4,9 @@
 .swiftpm/
 Package.resolved
 
+#Sparkle Directory
+sparkle/
+
 # Claude Code local settings
 .claude/
 

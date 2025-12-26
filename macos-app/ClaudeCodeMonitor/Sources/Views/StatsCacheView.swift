@@ -240,7 +240,7 @@ struct StatsCacheView: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: Spacing.md)], spacing: Spacing.md) {
                 TerminalMetricCard(
                     title: "Total Tokens",
-                    value: formatTokens(stats.totalTokens),
+                    value: NumberFormatting.tokens(stats.totalTokens),
                     icon: "number.circle.fill",
                     color: .phosphorCyan
                 )
@@ -268,14 +268,14 @@ struct StatsCacheView: View {
 
                 TerminalMetricCard(
                     title: "Messages",
-                    value: formatNumber(stats.totalMessages),
+                    value: NumberFormatting.compact(stats.totalMessages),
                     icon: "message.fill",
                     color: .phosphorCyan
                 )
 
                 TerminalMetricCard(
                     title: "Est. Cost",
-                    value: formatCost(stats.totalCost),
+                    value: NumberFormatting.cost(stats.totalCost),
                     icon: "dollarsign.circle.fill",
                     color: .phosphorGreen
                 )
@@ -283,7 +283,7 @@ struct StatsCacheView: View {
                 if let peakHour = stats.peakHour {
                     TerminalMetricCard(
                         title: "Peak Hour",
-                        value: formatHour(peakHour),
+                        value: NumberFormatting.hour(peakHour),
                         icon: "clock.fill",
                         color: .phosphorAmber
                     )
@@ -339,7 +339,7 @@ struct StatsCacheView: View {
                             .foregroundStyle(Color.noirStroke)
                         AxisValueLabel {
                             if let val = value.as(Int.self) {
-                                Text(formatNumber(val))
+                                Text(NumberFormatting.compact(val))
                                     .font(.terminalDataSmall)
                                     .foregroundStyle(Color.noirTextTertiary)
                             }
@@ -361,7 +361,7 @@ struct StatsCacheView: View {
         // Get sorted model names for consistent color assignment
         let sortedModels = Array(stats.modelUsage)
             .sorted(by: { $0.value.totalTokens > $1.value.totalTokens })
-            .map { shortModelName($0.key) }
+            .map { ModelFormatting.shortName($0.key) }
 
         return TerminalChartCard(
             title: "Token Usage by Model",
@@ -384,7 +384,7 @@ struct StatsCacheView: View {
                             outerRadius: .ratio(0.95),
                             angularInset: 3
                         )
-                        .foregroundStyle(colorForModel(shortModelName(model.key), in: sortedModels))
+                        .foregroundStyle(ModelFormatting.color(for: ModelFormatting.shortName(model.key), in: sortedModels))
                         .cornerRadius(4)
                     }
                     .chartBackground { _ in
@@ -404,10 +404,10 @@ struct StatsCacheView: View {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         ForEach(Array(stats.modelUsage).sorted(by: { $0.value.totalTokens > $1.value.totalTokens }), id: \.key) { model in
                             TerminalModelUsageRow(
-                                modelName: shortModelName(model.key),
+                                modelName: ModelFormatting.shortName(model.key),
                                 usage: model.value,
                                 fullName: model.key,
-                                color: colorForModel(shortModelName(model.key), in: sortedModels)
+                                color: ModelFormatting.color(for: ModelFormatting.shortName(model.key), in: sortedModels)
                             )
                         }
                     }
@@ -455,7 +455,7 @@ struct StatsCacheView: View {
                             .foregroundStyle(Color.noirStroke)
                         AxisValueLabel {
                             if let hour = value.as(Int.self) {
-                                Text(formatHour(hour))
+                                Text(NumberFormatting.hour(hour))
                                     .font(.terminalDataSmall)
                                     .foregroundStyle(Color.noirTextTertiary)
                             }
@@ -528,97 +528,6 @@ struct StatsCacheView: View {
         }
     }
 
-    // MARK: - Formatting Helpers
-
-    private func formatNumber(_ value: Int) -> String {
-        if value >= 1_000_000 {
-            return String(format: "%.1fM", Double(value) / 1_000_000)
-        } else if value >= 1_000 {
-            return String(format: "%.1fK", Double(value) / 1_000)
-        }
-        return "\(value)"
-    }
-
-    private func formatTokens(_ value: Int) -> String {
-        if value >= 1_000_000_000 {
-            return String(format: "%.2fB", Double(value) / 1_000_000_000)
-        } else if value >= 1_000_000 {
-            return String(format: "%.1fM", Double(value) / 1_000_000)
-        } else if value >= 1_000 {
-            return String(format: "%.1fK", Double(value) / 1_000)
-        }
-        return "\(value)"
-    }
-
-    private func formatCost(_ value: Double) -> String {
-        if value >= 1000 {
-            return String(format: "$%.0f", value)
-        } else if value >= 100 {
-            return String(format: "$%.1f", value)
-        } else if value >= 1 {
-            return String(format: "$%.2f", value)
-        }
-        return String(format: "$%.3f", value)
-    }
-
-    private func formatHour(_ hour: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "ha"
-        var components = DateComponents()
-        components.hour = hour
-        if let date = Calendar.current.date(from: components) {
-            return formatter.string(from: date).lowercased()
-        }
-        return "\(hour):00"
-    }
-
-    private func shortModelName(_ fullName: String) -> String {
-        if fullName.contains("opus-4-5") || fullName.contains("opus-4.5") {
-            return "Opus 4.5"
-        } else if fullName.contains("opus-4-1") || fullName.contains("opus-4.1") || fullName.contains("opus-4-0") {
-            return "Opus 4.1"
-        } else if fullName.contains("opus") {
-            return "Opus"
-        } else if fullName.contains("sonnet-4-5") || fullName.contains("sonnet-4.5") {
-            return "Sonnet 4.5"
-        } else if fullName.contains("sonnet-4-0") || fullName.contains("sonnet-4.0") {
-            return "Sonnet 4.0"
-        } else if fullName.contains("sonnet-3-5") || fullName.contains("sonnet-3.5") {
-            return "Sonnet 3.5"
-        } else if fullName.contains("sonnet") {
-            return "Sonnet"
-        } else if fullName.contains("haiku-4-5") || fullName.contains("haiku-4.5") {
-            return "Haiku 4.5"
-        } else if fullName.contains("haiku-3-5") || fullName.contains("haiku-3.5") {
-            return "Haiku 3.5"
-        } else if fullName.contains("haiku") {
-            return "Haiku"
-        }
-        return fullName
-    }
-
-    // Color palette for distinct model colors in charts
-    private let modelColorPalette: [Color] = [
-        .phosphorPurple,
-        .phosphorCyan,
-        .phosphorGreen,
-        .phosphorAmber,
-        .phosphorMagenta,
-        .phosphorOrange,
-        .phosphorRed,
-        Color(red: 0.4, green: 0.8, blue: 0.9),  // Light cyan
-        Color(red: 0.9, green: 0.6, blue: 0.8),  // Pink
-        Color(red: 0.6, green: 0.9, blue: 0.7),  // Mint
-    ]
-
-    private func colorForModel(_ name: String, in models: [String]) -> Color {
-        // Get the index of this model in the list to assign a unique color
-        if let index = models.firstIndex(of: name) {
-            return modelColorPalette[index % modelColorPalette.count]
-        }
-        return .noirTextSecondary
-    }
-
     // MARK: - Export Functions
 
     private func exportActivityData(_ stats: StatsCache) {
@@ -655,235 +564,6 @@ struct StatsCacheView: View {
         if savePanel.runModal() == .OK, let url = savePanel.url {
             try? csv.write(to: url, atomically: true, encoding: .utf8)
         }
-    }
-}
-
-// MARK: - Terminal Code Block
-
-struct TerminalCodeBlock: View {
-    let code: String
-    @State private var showCopied = false
-
-    var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Text(code)
-                .font(.terminalDataSmall)
-                .foregroundStyle(Color.phosphorGreen)
-                .textSelection(.enabled)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs)
-                .background {
-                    RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                        .fill(Color.noirBackground)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous)
-                                .strokeBorder(Color.noirStroke, lineWidth: 1)
-                        }
-                }
-
-            Button(action: copyToClipboard) {
-                Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 10))
-                    .foregroundStyle(showCopied ? Color.phosphorGreen : Color.noirTextTertiary)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(code, forType: .string)
-        withAnimation { showCopied = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation { showCopied = false }
-        }
-    }
-}
-
-// MARK: - Terminal Detail Row
-
-struct TerminalDetailRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.terminalCaptionSmall)
-                .foregroundStyle(Color.noirTextTertiary)
-            Spacer()
-            Text(value)
-                .font(.terminalData)
-                .foregroundStyle(Color.noirTextSecondary)
-                .textSelection(.enabled)
-        }
-    }
-}
-
-// MARK: - Terminal Model Usage Row
-
-struct TerminalModelUsageRow: View {
-    let modelName: String
-    let usage: ModelUsage
-    let fullName: String
-    let color: Color
-
-    @State private var isHovered = false
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            HStack {
-                HStack(spacing: Spacing.sm) {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 8, height: 8)
-                        .phosphorGlow(color, intensity: 0.4, isActive: isHovered)
-
-                    Text(modelName)
-                        .font(.terminalCaption)
-                        .foregroundStyle(Color.noirTextSecondary)
-                }
-
-                Spacer()
-
-                Text(formatTokens(usage.totalTokens))
-                    .font(.terminalData)
-                    .foregroundStyle(isHovered ? color : Color.noirTextPrimary)
-
-                Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color.noirTextTertiary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .buttonStyle(.plain)
-            }
-
-            if isExpanded {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    TerminalTokenDetailRow(label: "Input", value: usage.inputTokens)
-                    TerminalTokenDetailRow(label: "Output", value: usage.outputTokens)
-                    TerminalTokenDetailRow(label: "Cache Read", value: usage.cacheReadInputTokens)
-                    TerminalTokenDetailRow(label: "Cache Write", value: usage.cacheCreationInputTokens)
-
-                    Divider()
-                        .background(Color.noirStroke)
-
-                    HStack {
-                        Text("Est. Cost")
-                            .font(.terminalCaptionSmall)
-                            .foregroundStyle(Color.noirTextTertiary)
-                        Spacer()
-                        Text(String(format: "$%.2f", usage.estimatedCost(for: fullName)))
-                            .font(.terminalData)
-                            .foregroundStyle(Color.phosphorGreen)
-                            .phosphorGlow(.phosphorGreen, intensity: 0.3, isActive: true)
-                    }
-                }
-                .padding(.leading, Spacing.lg)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(Spacing.sm)
-        .background(isHovered ? color.opacity(0.05) : .clear)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small, style: .continuous))
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
-            }
-        }
-    }
-
-    private func formatTokens(_ value: Int) -> String {
-        if value >= 1_000_000_000 {
-            return String(format: "%.2fB", Double(value) / 1_000_000_000)
-        } else if value >= 1_000_000 {
-            return String(format: "%.1fM", Double(value) / 1_000_000)
-        } else if value >= 1_000 {
-            return String(format: "%.1fK", Double(value) / 1_000)
-        }
-        return "\(value)"
-    }
-}
-
-// MARK: - Terminal Token Detail Row
-
-struct TerminalTokenDetailRow: View {
-    let label: String
-    let value: Int
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.terminalCaptionSmall)
-                .foregroundStyle(Color.noirTextQuaternary)
-            Spacer()
-            Text(formatValue(value))
-                .font(.terminalDataSmall)
-                .foregroundStyle(Color.noirTextTertiary)
-        }
-    }
-
-    private func formatValue(_ value: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
-    }
-}
-
-// MARK: - Legacy Components (kept for compatibility)
-
-struct StatsSummaryCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        TerminalMetricCard(title: title, value: value, icon: icon, color: color)
-    }
-}
-
-struct ModelUsageRow: View {
-    let modelName: String
-    let usage: ModelUsage
-    let fullName: String
-
-    var body: some View {
-        TerminalModelUsageRow(
-            modelName: modelName,
-            usage: usage,
-            fullName: fullName,
-            color: .phosphorCyan
-        )
-    }
-}
-
-struct TokenDetailRow: View {
-    let label: String
-    let value: Int
-
-    var body: some View {
-        TerminalTokenDetailRow(label: label, value: value)
-    }
-}
-
-struct DetailRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        TerminalDetailRow(label: label, value: value)
-    }
-}
-
-struct CopyableCodeBlock: View {
-    let code: String
-    let label: String?
-
-    var body: some View {
-        TerminalCodeBlock(code: code)
     }
 }
 
