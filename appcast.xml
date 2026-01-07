@@ -30,11 +30,10 @@
           <li>Efficiency metrics: cost/minute, tokens/minute</li>
         </ul>
       ]]></description>
-      <!-- Generate signature with: sparkle/bin/sign_update ClaudeCodeMonitor.dmg -->
       <enclosure
         url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.4.0-beta/ClaudeCodeMonitor.dmg"
-        sparkle:edSignature="PLACEHOLDER_SIGNATURE"
-        length="0"
+        sparkle:edSignature="IN7sSAXsiNyWpwbuIevbKiDUWB3FmQ9Z8LxP0OBLHppgR37FkjWzcAExIJEXOYzWJllR8u4molDh8ey7uEPrCg=="
+        length="4240443"
         type="application/octet-stream"/>
     </item>
 
