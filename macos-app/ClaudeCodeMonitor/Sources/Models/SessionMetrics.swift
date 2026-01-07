@@ -1,7 +1,7 @@
 import Foundation
 
 /// Aggregated metrics for a single Claude Code session
-struct SessionMetrics: Identifiable {
+struct SessionMetrics: Identifiable, Hashable {
     let sessionId: String
     var totalCostUSD: Decimal
     var totalTokens: Int
@@ -12,6 +12,16 @@ struct SessionMetrics: Identifiable {
     var lastSeen: Date?
 
     var id: String { sessionId }
+
+    // MARK: - Hashable Conformance
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(sessionId)
+    }
+
+    static func == (lhs: SessionMetrics, rhs: SessionMetrics) -> Bool {
+        lhs.sessionId == rhs.sessionId
+    }
 }
 
 // MARK: - Derived Properties
