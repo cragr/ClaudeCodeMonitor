@@ -24,6 +24,13 @@ struct PrometheusMetricResult: Decodable {
     var metricName: String {
         metric["__name__"] ?? "unknown"
     }
+
+    /// Memberwise initializer for testing purposes
+    init(metric: [String: String], value: PrometheusValue?, values: [PrometheusValue]?) {
+        self.metric = metric
+        self.value = value
+        self.values = values
+    }
 }
 
 struct PrometheusValue: Decodable {
@@ -34,6 +41,12 @@ struct PrometheusValue: Decodable {
         var container = try decoder.unkeyedContainer()
         timestamp = try container.decode(Double.self)
         value = try container.decode(String.self)
+    }
+
+    /// Memberwise initializer for testing purposes
+    init(timestamp: Double, valueString: String) {
+        self.timestamp = timestamp
+        self.value = valueString
     }
 
     var doubleValue: Double? {
