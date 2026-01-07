@@ -60,6 +60,37 @@ class SessionMetricsService: ObservableObject {
         sessions.max(by: { $0.activeTime < $1.activeTime })
     }
 
+    // MARK: - Costs by Project
+
+    /// Aggregated costs grouped by project
+    var costsByProject: [ProjectCostSummary] {
+        var projectTotals: [String: (cost: Decimal, tokens: Int, sessions: Int, activeTime: TimeInterval)] = [:]
+
+        for session in sessions {
+            let projectKey = session.projectPath ?? "Unknown"
+
+            if var existing = projectTotals[projectKey] {
+                existing.cost += session.totalCostUSD
+                existing.tokens += session.totalTokens
+                existing.sessions += 1
+                existing.activeTime += session.activeTime
+                projectTotals[projectKey] = existing
+            } else {
+                projectTotals[projectKey] = (session.totalCostUSD, session.totalTokens, 1, session.activeTime)
+            }
+        }
+
+        return projectTotals.map { (path, totals) in
+            ProjectCostSummary(
+                projectPath: path,
+                totalCostUSD: totals.cost,
+                totalTokens: totals.tokens,
+                sessionCount: totals.sessions,
+                totalActiveTime: totals.activeTime
+            )
+        }.sorted { $0.totalCostUSD > $1.totalCostUSD }
+    }
+
     // MARK: - Fetch
 
     /// Fetches session metrics from Prometheus for the given time range

@@ -59,6 +59,12 @@ struct SessionsView: View {
                                 .opacity(appearAnimation ? 1 : 0)
                                 .offset(y: appearAnimation ? 0 : 15)
 
+                            if !service.costsByProject.isEmpty {
+                                projectCostsSection
+                                    .opacity(appearAnimation ? 1 : 0)
+                                    .offset(y: appearAnimation ? 0 : 17)
+                            }
+
                             if let error = service.error, !service.sessions.isEmpty {
                                 warningBanner(error: error)
                             }
@@ -276,6 +282,61 @@ struct SessionsView: View {
         }
     }
 
+    // MARK: - Project Costs Section
+
+    private var projectCostsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            TerminalSectionHeader("Cost by Project", trailing: "\(service.costsByProject.count) projects")
+
+            VStack(spacing: 0) {
+                // Table Header
+                HStack(spacing: 0) {
+                    Text("PROJECT")
+                        .frame(width: 180, alignment: .leading)
+
+                    Text("COST")
+                        .frame(width: 80, alignment: .trailing)
+
+                    Text("TOKENS")
+                        .frame(width: 80, alignment: .trailing)
+
+                    Text("SESSIONS")
+                        .frame(width: 70, alignment: .trailing)
+
+                    Text("TIME")
+                        .frame(width: 80, alignment: .trailing)
+
+                    Spacer()
+                }
+                .font(.terminalCaptionSmall)
+                .foregroundStyle(Color.noirTextTertiary)
+                .tracking(1)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(Color.noirSurface.opacity(0.5))
+
+                Divider()
+                    .background(Color.noirStroke)
+
+                // Project Rows
+                ForEach(service.costsByProject) { project in
+                    ProjectCostRow(project: project)
+
+                    if project.id != service.costsByProject.last?.id {
+                        Divider()
+                            .background(Color.noirStroke.opacity(0.5))
+                    }
+                }
+            }
+            .background(Color.noirSurface.opacity(0.3))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
+                    .stroke(Color.noirStroke, lineWidth: 1)
+            )
+        }
+    }
+
     // MARK: - All Sessions Section
 
     private var allSessionsSection: some View {
@@ -483,6 +544,62 @@ struct SessionsTableView: View {
         .overlay {
             RoundedRectangle(cornerRadius: CornerRadius.medium, style: .continuous)
                 .strokeBorder(Color.noirStroke, lineWidth: 1)
+        }
+    }
+}
+
+// MARK: - Project Cost Row
+
+struct ProjectCostRow: View {
+    let project: ProjectCostSummary
+
+    @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "folder.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.phosphorOrange)
+
+                Text(project.projectName)
+                    .font(.terminalData)
+                    .foregroundStyle(isHovered ? Color.phosphorOrange : Color.noirTextPrimary)
+                    .lineLimit(1)
+            }
+            .frame(width: 180, alignment: .leading)
+            .help(project.projectPath)
+
+            Text(project.formattedCost)
+                .font(.terminalData)
+                .foregroundStyle(Color.phosphorGreen)
+                .frame(width: 80, alignment: .trailing)
+
+            Text(project.formattedTokens)
+                .font(.terminalData)
+                .foregroundStyle(Color.phosphorCyan)
+                .frame(width: 80, alignment: .trailing)
+
+            Text("\(project.sessionCount)")
+                .font(.terminalData)
+                .foregroundStyle(Color.noirTextSecondary)
+                .frame(width: 70, alignment: .trailing)
+
+            Text(project.formattedActiveTime)
+                .font(.terminalData)
+                .foregroundStyle(Color.phosphorAmber)
+                .frame(width: 80, alignment: .trailing)
+
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(isHovered ? Color.phosphorOrange.opacity(0.05) : Color.clear)
+        .onHover { hovering in
+            withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.1)) {
+                isHovered = hovering
+            }
         }
     }
 }

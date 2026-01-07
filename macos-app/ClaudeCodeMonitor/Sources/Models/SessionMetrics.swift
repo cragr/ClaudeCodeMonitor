@@ -102,3 +102,53 @@ extension SessionMetrics {
         return "\(prefix)...\(suffix)"
     }
 }
+
+// MARK: - Project Cost Summary
+
+/// Aggregated cost summary for a project
+struct ProjectCostSummary: Identifiable {
+    let projectPath: String
+    let totalCostUSD: Decimal
+    let totalTokens: Int
+    let sessionCount: Int
+    let totalActiveTime: TimeInterval
+
+    var id: String { projectPath }
+
+    /// Project name (last path component)
+    var projectName: String {
+        if projectPath == "Unknown" { return "Unknown" }
+        return (projectPath as NSString).lastPathComponent
+    }
+
+    /// Formatted cost string
+    var formattedCost: String {
+        let cost = (totalCostUSD as NSDecimalNumber).doubleValue
+        if cost >= 1.0 {
+            return String(format: "$%.2f", cost)
+        } else if cost >= 0.01 {
+            return String(format: "$%.3f", cost)
+        }
+        return String(format: "$%.4f", cost)
+    }
+
+    /// Formatted token count
+    var formattedTokens: String {
+        if totalTokens >= 1_000_000 {
+            return String(format: "%.2fM", Double(totalTokens) / 1_000_000)
+        } else if totalTokens >= 1_000 {
+            return String(format: "%.1fK", Double(totalTokens) / 1_000)
+        }
+        return "\(totalTokens)"
+    }
+
+    /// Formatted active time
+    var formattedActiveTime: String {
+        let hours = Int(totalActiveTime) / 3600
+        let minutes = (Int(totalActiveTime) % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+}
