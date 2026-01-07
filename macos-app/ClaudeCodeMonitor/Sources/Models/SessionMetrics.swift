@@ -10,8 +10,15 @@ struct SessionMetrics: Identifiable, Hashable {
     var activeTime: TimeInterval
     var firstSeen: Date?
     var lastSeen: Date?
+    var projectPath: String?
 
     var id: String { sessionId }
+
+    /// Project name (last path component) for display
+    var projectName: String? {
+        guard let path = projectPath else { return nil }
+        return (path as NSString).lastPathComponent
+    }
 
     // MARK: - Hashable Conformance
 

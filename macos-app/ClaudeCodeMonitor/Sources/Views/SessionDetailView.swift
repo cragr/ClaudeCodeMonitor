@@ -89,7 +89,35 @@ struct SessionDetailView: View {
 
                 SessionIdCopyButton(sessionId: session.sessionId)
             }
+
+            // Project Path
+            if let projectPath = session.projectPath {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.phosphorOrange)
+
+                    Text(projectPath)
+                        .font(.terminalCaption)
+                        .foregroundStyle(Color.noirTextSecondary)
+                        .textSelection(.enabled)
+                        .lineLimit(1)
+
+                    Button(action: { copyProjectPath(projectPath) }) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.noirTextTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy project path")
+                }
+            }
         }
+    }
+
+    private func copyProjectPath(_ path: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(path, forType: .string)
     }
 
     // MARK: - Derived Metrics Row

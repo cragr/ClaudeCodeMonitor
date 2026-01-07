@@ -35,7 +35,7 @@ struct SessionsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(client: PrometheusClient) {
-        _service = StateObject(wrappedValue: SessionMetricsService(client: client))
+        _service = StateObject(wrappedValue: SessionMetricsService(client: client, enableProjectLookup: true))
     }
 
     var body: some View {
@@ -439,19 +439,22 @@ struct SessionsTableView: View {
             // Table Header
             HStack(spacing: 0) {
                 Text("SESSION ID")
-                    .frame(width: 140, alignment: .leading)
+                    .frame(width: 120, alignment: .leading)
+
+                Text("PROJECT")
+                    .frame(width: 120, alignment: .leading)
 
                 Text("COST")
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text("TOKENS")
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text("DURATION")
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text("COST/MIN")
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Spacer()
 
@@ -511,27 +514,34 @@ struct SessionTableRow: View {
                 Text(session.truncatedSessionId)
                     .font(.terminalData)
                     .foregroundStyle(isHovered ? Color.phosphorCyan : Color.noirTextSecondary)
-                    .frame(width: 140, alignment: .leading)
+                    .frame(width: 120, alignment: .leading)
+
+                Text(session.projectName ?? "—")
+                    .font(.terminalData)
+                    .foregroundStyle(session.projectName != nil ? Color.phosphorOrange : Color.noirTextTertiary)
+                    .frame(width: 120, alignment: .leading)
+                    .lineLimit(1)
+                    .help(session.projectPath ?? "Unknown project")
 
                 Text(session.formattedCost)
                     .font(.terminalData)
                     .foregroundStyle(Color.phosphorGreen)
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text(session.formattedTokens)
                     .font(.terminalData)
                     .foregroundStyle(Color.phosphorCyan)
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text(session.formattedActiveTime)
                     .font(.terminalData)
                     .foregroundStyle(Color.phosphorAmber)
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Text(formattedCostPerMin)
                     .font(.terminalData)
                     .foregroundStyle(Color.noirTextSecondary)
-                    .frame(width: 80, alignment: .trailing)
+                    .frame(width: 70, alignment: .trailing)
 
                 Spacer()
 

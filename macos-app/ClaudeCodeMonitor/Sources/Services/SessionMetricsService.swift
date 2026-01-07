@@ -30,9 +30,20 @@ class SessionMetricsService: ObservableObject {
 
     private var lastSuccessfulSessions: [SessionMetrics] = []
     private let client: PrometheusClient
+    private let historyProvider: (any SessionHistoryProvider)?
 
-    init(client: PrometheusClient) {
+    init(client: PrometheusClient, historyProvider: (any SessionHistoryProvider)? = nil) {
         self.client = client
+        self.historyProvider = historyProvider
+    }
+
+    /// Convenience initializer with default file-based history provider
+    convenience init(client: PrometheusClient, enableProjectLookup: Bool) {
+        if enableProjectLookup {
+            self.init(client: client, historyProvider: FileSessionHistoryProvider())
+        } else {
+            self.init(client: client, historyProvider: nil)
+        }
     }
 
     // MARK: - Top Sessions (computed client-side)
@@ -133,12 +144,24 @@ class SessionMetricsService: ObservableObject {
         }
 
         // Merge results
-        let merged = Self.mergeResults(
+        var merged = Self.mergeResults(
             costResults: costResults ?? [],
             typeResults: typeResults ?? [],
             modelResults: modelResults ?? [],
             activeResults: activeResults ?? []
         )
+
+        // Enrich with project paths from history provider
+        if !merged.isEmpty, let historyProvider = historyProvider {
+            let sessionIds = merged.map { $0.sessionId }
+            let projectPaths = await historyProvider.projectPaths(for: sessionIds)
+
+            for i in merged.indices {
+                if let path = projectPaths[merged[i].sessionId] {
+                    merged[i].projectPath = path
+                }
+            }
+        }
 
         if merged.isEmpty {
             error = .noSessions
