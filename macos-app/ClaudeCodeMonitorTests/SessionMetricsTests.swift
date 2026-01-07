@@ -105,4 +105,24 @@ final class SessionMetricsTests: XCTestCase {
         )
         XCTAssertEqual(session.id, "unique-id-123")
     }
+
+    // MARK: - SessionFetchError Tests
+
+    func testPartialDataErrorDescription() {
+        let error = SessionFetchError.partialData(fetched: 3, failed: ["cost", "active time"])
+        XCTAssertTrue(error.errorDescription?.contains("3 metrics") ?? false)
+        XCTAssertTrue(error.errorDescription?.contains("cost") ?? false)
+        XCTAssertTrue(error.errorDescription?.contains("active time") ?? false)
+    }
+
+    func testNoSessionsErrorDescription() {
+        let error = SessionFetchError.noSessions
+        XCTAssertTrue(error.errorDescription?.contains("No sessions") ?? false)
+    }
+
+    func testConnectionFailedErrorDescription() {
+        let underlyingError = NSError(domain: "test", code: -1, userInfo: nil)
+        let error = SessionFetchError.connectionFailed(underlying: underlyingError)
+        XCTAssertTrue(error.errorDescription?.contains("Unable to reach") ?? false)
+    }
 }
