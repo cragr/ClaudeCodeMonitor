@@ -449,4 +449,38 @@ extension PromQLQueryBuilder {
             .sum()
             .build()
     }
+
+    // MARK: - Session-Level Queries
+
+    /// Cost per session (increase during time range)
+    static func costBySession(range: String) -> String {
+        PromQLQueryBuilder(metric: "claude_code_cost_usage_USD_total")
+            .increase(range)
+            .sum(by: ["session_id"])
+            .build()
+    }
+
+    /// Tokens per session by type (increase during time range)
+    static func tokensBySessionAndType(range: String) -> String {
+        PromQLQueryBuilder(metric: "claude_code_token_usage_tokens_total")
+            .increase(range)
+            .sum(by: ["session_id", "type"])
+            .build()
+    }
+
+    /// Tokens per session by model (increase during time range)
+    static func tokensBySessionAndModel(range: String) -> String {
+        PromQLQueryBuilder(metric: "claude_code_token_usage_tokens_total")
+            .increase(range)
+            .sum(by: ["session_id", "model"])
+            .build()
+    }
+
+    /// Active time per session (increase during time range)
+    static func activeTimeBySession(range: String) -> String {
+        PromQLQueryBuilder(metric: "claude_code_active_time_seconds_total")
+            .increase(range)
+            .sum(by: ["session_id"])
+            .build()
+    }
 }
