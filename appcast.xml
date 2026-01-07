@@ -7,6 +7,38 @@
     <language>en</language>
 
     <item>
+      <title>Version 0.4.0-beta</title>
+      <pubDate>Tue, 07 Jan 2026 12:00:00 +0000</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>0.4.0-beta</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>What's New in 0.4.0-beta</h2>
+        <h3>New Sessions View</h3>
+        <ul>
+          <li>Session-level cost analysis with detailed breakdowns</li>
+          <li>Project correlation from ~/.claude/history.jsonl</li>
+          <li>Cost by Project summary showing total spend per project</li>
+          <li>Top Sessions cards: Highest Cost, Most Tokens, Longest Session</li>
+          <li>Token breakdown by type (Input, Output, Cache Read, Cache Creation)</li>
+          <li>Token breakdown by model</li>
+        </ul>
+        <h3>Session Details</h3>
+        <ul>
+          <li>Full session metrics with project path display</li>
+          <li>Donut charts for token distribution</li>
+          <li>Efficiency metrics: cost/minute, tokens/minute</li>
+        </ul>
+      ]]></description>
+      <!-- Generate signature with: sparkle/bin/sign_update ClaudeCodeMonitor.dmg -->
+      <enclosure
+        url="https://github.com/cragr/ClaudeCodeMonitor/releases/download/v0.4.0-beta/ClaudeCodeMonitor.dmg"
+        sparkle:edSignature="PLACEHOLDER_SIGNATURE"
+        length="0"
+        type="application/octet-stream"/>
+    </item>
+
+    <item>
       <title>Version 0.3.1-beta</title>
       <pubDate>Thu, 26 Dec 2025 17:55:00 +0000</pubDate>
       <sparkle:version>5</sparkle:version>
