@@ -12,6 +12,7 @@ struct ContentView: View {
         case summary = "Summary"
         case tokenMetrics = "Token Metrics"
         case insights = "Insights"
+        case sessions = "Sessions"
         case localStatsCache = "Local Stats Cache"
         case smokeTest = "Smoke Test"
 
@@ -22,6 +23,7 @@ struct ContentView: View {
             case .summary: return "Overview of key metrics and costs"
             case .tokenMetrics: return "Token usage and model performance"
             case .insights: return "Usage trends and comparisons"
+            case .sessions: return "Session cost explorer and analysis"
             case .localStatsCache: return "Local Claude Code usage statistics"
             case .smokeTest: return "Debug and test connectivity"
             }
@@ -32,8 +34,9 @@ struct ContentView: View {
             case .summary: return "1"
             case .tokenMetrics: return "2"
             case .insights: return "3"
-            case .localStatsCache: return "4"
-            case .smokeTest: return "5"
+            case .sessions: return "4"
+            case .localStatsCache: return "5"
+            case .smokeTest: return "6"
             }
         }
 
@@ -42,8 +45,9 @@ struct ContentView: View {
             case .summary: return "1"
             case .tokenMetrics: return "2"
             case .insights: return "3"
-            case .localStatsCache: return "4"
-            case .smokeTest: return "5"
+            case .sessions: return "4"
+            case .localStatsCache: return "5"
+            case .smokeTest: return "6"
             }
         }
     }
@@ -81,7 +85,7 @@ struct ContentView: View {
     }
 
     private var navigationSubtitle: String {
-        if selectedTab == .localStatsCache || selectedTab == .smokeTest || selectedTab == .insights {
+        if selectedTab == .localStatsCache || selectedTab == .smokeTest || selectedTab == .insights || selectedTab == .sessions {
             return ""
         }
         if metricsService.connectionStatus.isConnected {
@@ -262,6 +266,16 @@ struct ContentView: View {
                 PerformanceDashboardView(metricsService: metricsService)
             case .insights:
                 InsightsView()
+            case .sessions:
+                if let url = settingsManager.prometheusURL {
+                    SessionsView(client: PrometheusClient(baseURL: url))
+                } else {
+                    TerminalEmptyState(
+                        title: "No Prometheus URL",
+                        message: "Configure Prometheus URL in settings to view sessions.",
+                        icon: "exclamationmark.triangle"
+                    )
+                }
             case .localStatsCache:
                 StatsCacheView()
             case .smokeTest:
@@ -343,6 +357,7 @@ struct ContentView: View {
         case .summary: return "square.grid.2x2"
         case .tokenMetrics: return "waveform.path.ecg"
         case .insights: return "lightbulb.fill"
+        case .sessions: return "list.bullet.rectangle"
         case .localStatsCache: return "internaldrive"
         case .smokeTest: return "stethoscope"
         }
@@ -353,6 +368,7 @@ struct ContentView: View {
         case .summary: return .phosphorGreen
         case .tokenMetrics: return .phosphorCyan
         case .insights: return .phosphorAmber
+        case .sessions: return .phosphorOrange
         case .localStatsCache: return .phosphorPurple
         case .smokeTest: return .noirTextTertiary
         }

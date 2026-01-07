@@ -174,4 +174,38 @@ final class PrometheusClientTests: XCTestCase {
             .build()
         XCTAssertEqual(query, "rate(claude_code_token_usage[5m])")
     }
+
+    // MARK: - Session Queries
+
+    func testCostBySessionQuery() {
+        let query = PromQLQueryBuilder.costBySession(range: "24h")
+        XCTAssertEqual(
+            query,
+            "sum by (session_id) (increase(claude_code_cost_usage_USD_total[24h]))"
+        )
+    }
+
+    func testTokensBySessionAndTypeQuery() {
+        let query = PromQLQueryBuilder.tokensBySessionAndType(range: "24h")
+        XCTAssertEqual(
+            query,
+            "sum by (session_id,type) (increase(claude_code_token_usage_tokens_total[24h]))"
+        )
+    }
+
+    func testTokensBySessionAndModelQuery() {
+        let query = PromQLQueryBuilder.tokensBySessionAndModel(range: "24h")
+        XCTAssertEqual(
+            query,
+            "sum by (session_id,model) (increase(claude_code_token_usage_tokens_total[24h]))"
+        )
+    }
+
+    func testActiveTimeBySessionQuery() {
+        let query = PromQLQueryBuilder.activeTimeBySession(range: "24h")
+        XCTAssertEqual(
+            query,
+            "sum by (session_id) (increase(claude_code_active_time_seconds_total[24h]))"
+        )
+    }
 }
