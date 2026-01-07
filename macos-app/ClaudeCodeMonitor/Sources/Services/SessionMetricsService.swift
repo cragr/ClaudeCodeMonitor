@@ -27,6 +27,152 @@ class SessionMetricsService: ObservableObject {
     @Published var sessions: [SessionMetrics] = []
     @Published var isLoading = false
     @Published var error: SessionFetchError?
+
+    private var lastSuccessfulSessions: [SessionMetrics] = []
+    private let client: PrometheusClient
+
+    init(client: PrometheusClient) {
+        self.client = client
+    }
+
+    // MARK: - Top Sessions (computed client-side)
+
+    var highestCostSession: SessionMetrics? {
+        sessions.max(by: { $0.totalCostUSD < $1.totalCostUSD })
+    }
+
+    var mostTokensSession: SessionMetrics? {
+        sessions.max(by: { $0.totalTokens < $1.totalTokens })
+    }
+
+    var longestSession: SessionMetrics? {
+        sessions.max(by: { $0.activeTime < $1.activeTime })
+    }
+
+    // MARK: - Fetch
+
+    /// Fetches session metrics from Prometheus for the given time range
+    /// - Parameter timeRange: The time range preset for the query
+    func fetchSessions(timeRange: TimeRangePreset) async {
+        isLoading = true
+        error = nil
+
+        let rangeString = timeRange.promQLRange
+
+        // Use actor to collect failures in a thread-safe manner
+        let failureCollector = FailureCollector()
+
+        // Results from concurrent fetches
+        var costResults: [PrometheusMetricResult]?
+        var typeResults: [PrometheusMetricResult]?
+        var modelResults: [PrometheusMetricResult]?
+        var activeResults: [PrometheusMetricResult]?
+
+        // Fetch all queries concurrently
+        await withTaskGroup(of: (QueryKind, [PrometheusMetricResult]?).self) { group in
+            group.addTask {
+                do {
+                    let results = try await self.client.query(PromQLQueryBuilder.costBySession(range: rangeString))
+                    return (.cost, results)
+                } catch {
+                    await failureCollector.addFailure("cost")
+                    return (.cost, nil)
+                }
+            }
+            group.addTask {
+                do {
+                    let results = try await self.client.query(PromQLQueryBuilder.tokensBySessionAndType(range: rangeString))
+                    return (.tokensByType, results)
+                } catch {
+                    await failureCollector.addFailure("tokens by type")
+                    return (.tokensByType, nil)
+                }
+            }
+            group.addTask {
+                do {
+                    let results = try await self.client.query(PromQLQueryBuilder.tokensBySessionAndModel(range: rangeString))
+                    return (.tokensByModel, results)
+                } catch {
+                    await failureCollector.addFailure("tokens by model")
+                    return (.tokensByModel, nil)
+                }
+            }
+            group.addTask {
+                do {
+                    let results = try await self.client.query(PromQLQueryBuilder.activeTimeBySession(range: rangeString))
+                    return (.activeTime, results)
+                } catch {
+                    await failureCollector.addFailure("active time")
+                    return (.activeTime, nil)
+                }
+            }
+
+            // Collect results
+            for await (kind, results) in group {
+                switch kind {
+                case .cost:
+                    costResults = results
+                case .tokensByType:
+                    typeResults = results
+                case .tokensByModel:
+                    modelResults = results
+                case .activeTime:
+                    activeResults = results
+                }
+            }
+        }
+
+        let failures = await failureCollector.failures
+
+        // Check for total failure
+        if costResults == nil && typeResults == nil && modelResults == nil && activeResults == nil {
+            error = .connectionFailed(underlying: NSError(domain: "SessionMetricsService", code: -1))
+            sessions = lastSuccessfulSessions
+            isLoading = false
+            return
+        }
+
+        // Merge results
+        let merged = Self.mergeResults(
+            costResults: costResults ?? [],
+            typeResults: typeResults ?? [],
+            modelResults: modelResults ?? [],
+            activeResults: activeResults ?? []
+        )
+
+        if merged.isEmpty {
+            error = .noSessions
+            sessions = lastSuccessfulSessions
+        } else {
+            sessions = merged
+            lastSuccessfulSessions = merged
+
+            if !failures.isEmpty {
+                error = .partialData(fetched: 4 - failures.count, failed: failures)
+            }
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Query Kind
+
+private enum QueryKind {
+    case cost
+    case tokensByType
+    case tokensByModel
+    case activeTime
+}
+
+// MARK: - Thread-Safe Failure Collector
+
+private actor FailureCollector {
+    var failures: [String] = []
+
+    func addFailure(_ name: String) {
+        failures.append(name)
+    }
 }
 
 // MARK: - Merge Logic
