@@ -78,9 +78,49 @@ EOF
 # Code sign if DEVELOPER_ID is set
 if [ -n "$DEVELOPER_ID" ]; then
     echo "Code signing with: $DEVELOPER_ID"
-    sudo codesign --deep --force --option runtime --verify --verbose \
-        --sign "$DEVELOPER_ID" \
-        "$BUNDLE_NAME"
+
+    # Sign Sparkle framework components (inside-out signing)
+    SPARKLE_FW="$BUNDLE_NAME/Contents/Frameworks/Sparkle.framework"
+    if [ -d "$SPARKLE_FW" ]; then
+        echo "  Signing Sparkle.framework components..."
+
+        # Sign XPC services first (deepest level)
+        for xpc in "$SPARKLE_FW/Versions/B/XPCServices/"*.xpc; do
+            if [ -d "$xpc" ]; then
+                codesign --force --options runtime --timestamp \
+                    --sign "$DEVELOPER_ID" "$xpc"
+                echo "    Signed: $(basename "$xpc")"
+            fi
+        done
+
+        # Sign Autoupdate binary (bare executable, not a .app)
+        if [ -f "$SPARKLE_FW/Versions/B/Autoupdate" ]; then
+            codesign --force --options runtime --timestamp \
+                --sign "$DEVELOPER_ID" "$SPARKLE_FW/Versions/B/Autoupdate"
+            echo "    Signed: Autoupdate"
+        fi
+
+        # Sign Updater.app bundle
+        if [ -d "$SPARKLE_FW/Versions/B/Updater.app" ]; then
+            codesign --force --options runtime --timestamp \
+                --sign "$DEVELOPER_ID" "$SPARKLE_FW/Versions/B/Updater.app"
+            echo "    Signed: Updater.app"
+        fi
+
+        # Sign the framework itself
+        codesign --force --options runtime --timestamp \
+            --sign "$DEVELOPER_ID" "$SPARKLE_FW"
+        echo "    Signed: Sparkle.framework"
+    fi
+
+    # Sign the main app bundle last
+    codesign --force --options runtime --timestamp \
+        --sign "$DEVELOPER_ID" "$BUNDLE_NAME"
+    echo "  Signed: $BUNDLE_NAME"
+
+    # Verify the signature
+    echo "  Verifying signature..."
+    codesign --verify --verbose=2 "$BUNDLE_NAME"
     echo "  Code signing complete"
 else
     echo "Skipping code signing (DEVELOPER_ID not set)"
@@ -110,6 +150,32 @@ fi
 # Clean up app bundle (DMG/ZIP contain the app)
 echo "Cleaning up app bundle..."
 rm -rf "$BUNDLE_NAME"
+
+# Notarize DMG if credentials are set
+if [ "$DMG_CREATED" = true ] && [ -n "$APPLE_ID" ] && [ -n "$TEAM_ID" ] && [ -n "$APP_PASSWORD" ]; then
+    echo "Notarizing DMG..."
+    xcrun notarytool submit "$APP_NAME.dmg" \
+        --apple-id "$APPLE_ID" \
+        --team-id "$TEAM_ID" \
+        --password "$APP_PASSWORD" \
+        --wait
+
+    echo "Stapling notarization ticket..."
+    xcrun stapler staple "$APP_NAME.dmg"
+    echo "  Notarization complete"
+elif [ "$DMG_CREATED" = true ]; then
+    echo "Skipping notarization (credentials not set)"
+    echo "  Set APPLE_ID, TEAM_ID, and APP_PASSWORD env vars to notarize"
+fi
+
+# Sign DMG with Sparkle EdDSA if sign_update is available
+SPARKLE_SIGN="$SCRIPT_DIR/../../sparkle/bin/sign_update"
+if [ "$DMG_CREATED" = true ] && [ -x "$SPARKLE_SIGN" ]; then
+    echo "Generating Sparkle EdDSA signature..."
+    "$SPARKLE_SIGN" "$APP_NAME.dmg"
+elif [ "$DMG_CREATED" = true ]; then
+    echo "Skipping Sparkle signing (sign_update not found at $SPARKLE_SIGN)"
+fi
 
 echo ""
 echo "Build complete!"
