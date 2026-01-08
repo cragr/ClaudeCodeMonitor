@@ -37,5 +37,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/cragr/ClaudeCodeMonitor/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
   }
 }
