@@ -10,6 +10,7 @@
     SettingsModal,
     TabNav,
     InsightsView,
+    SessionsView,
   } from '$lib/components';
   import { metrics, isLoading, error, timeRange, isConnected } from '$lib/stores';
   import { settings } from '$lib/stores/settings';
@@ -156,9 +157,7 @@
   {:else if activeTab === 'insights'}
     <InsightsView />
   {:else if activeTab === 'sessions'}
-    <div class="flex items-center justify-center h-64">
-      <div class="text-gray-400">Sessions view coming soon...</div>
-    </div>
+    <SessionsView />
   {/if}
 </main>
 
