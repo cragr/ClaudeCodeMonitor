@@ -57,6 +57,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_metrics,
             commands::test_connection,
+            insights::get_insights_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

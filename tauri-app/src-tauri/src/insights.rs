@@ -1,6 +1,6 @@
 // tauri-app/src-tauri/src/insights.rs
 
-use chrono::NaiveDate;
+use chrono::{Datelike, Duration, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -122,4 +122,204 @@ pub fn load_stats_cache() -> Result<StatsCache, String> {
     let contents = fs::read_to_string(&path)
         .map_err(|_| "Stats cache file not found. Use Claude Code to generate usage data.")?;
     serde_json::from_str(&contents).map_err(|e| format!("Failed to parse stats cache: {}", e))
+}
+
+fn get_period_dates(period: &str) -> (NaiveDate, NaiveDate, NaiveDate, NaiveDate) {
+    let today = Local::now().date_naive();
+
+    match period {
+        "this_week" => {
+            let week_start =
+                today - Duration::days(today.weekday().num_days_from_monday() as i64);
+            let prev_week_start = week_start - Duration::days(7);
+            let prev_week_end = week_start - Duration::days(1);
+            (week_start, today, prev_week_start, prev_week_end)
+        }
+        "this_month" => {
+            let month_start = NaiveDate::from_ymd_opt(today.year(), today.month(), 1).unwrap();
+            let prev_month_end = month_start - Duration::days(1);
+            let prev_month_start =
+                NaiveDate::from_ymd_opt(prev_month_end.year(), prev_month_end.month(), 1).unwrap();
+            (month_start, today, prev_month_start, prev_month_end)
+        }
+        _ => {
+            // last_7_days
+            let start = today - Duration::days(6);
+            let prev_end = start - Duration::days(1);
+            let prev_start = prev_end - Duration::days(6);
+            (start, today, prev_start, prev_end)
+        }
+    }
+}
+
+fn sum_activity_in_range(
+    activities: &[DailyActivity],
+    start: NaiveDate,
+    end: NaiveDate,
+) -> (u32, u32) {
+    let mut messages = 0u32;
+    let mut sessions = 0u32;
+
+    for activity in activities {
+        if let Ok(date) = NaiveDate::parse_from_str(&activity.date, "%Y-%m-%d") {
+            if date >= start && date <= end {
+                messages += activity.message_count;
+                sessions += activity.session_count;
+            }
+        }
+    }
+    (messages, sessions)
+}
+
+fn sum_tokens_in_range(
+    daily_tokens: &Option<Vec<DailyModelTokens>>,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> u64 {
+    let Some(tokens) = daily_tokens else { return 0 };
+
+    let mut total = 0u64;
+    for day in tokens {
+        if let Ok(date) = NaiveDate::parse_from_str(&day.date, "%Y-%m-%d") {
+            if date >= start && date <= end {
+                total += day.tokens_by_model.values().sum::<u64>();
+            }
+        }
+    }
+    total
+}
+
+fn calculate_cost(tokens: u64, pricing_provider: &str) -> f64 {
+    // Simplified cost calculation (using average of input/output rates)
+    // Opus 4.5: ~$15/1M tokens average
+    let rate_per_million = match pricing_provider {
+        "google-vertex" => 16.5, // 10% premium
+        _ => 15.0,               // anthropic, aws-bedrock
+    };
+    (tokens as f64 / 1_000_000.0) * rate_per_million
+}
+
+fn find_peak_hour(hour_counts: &Option<HashMap<String, u32>>) -> Option<u32> {
+    hour_counts.as_ref().and_then(|counts| {
+        counts
+            .iter()
+            .max_by_key(|(_, &v)| v)
+            .and_then(|(k, _)| k.parse().ok())
+    })
+}
+
+fn get_daily_activity_points(
+    activities: &[DailyActivity],
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Vec<DailyActivityPoint> {
+    activities
+        .iter()
+        .filter_map(|a| {
+            let date = NaiveDate::parse_from_str(&a.date, "%Y-%m-%d").ok()?;
+            if date >= start && date <= end {
+                Some(DailyActivityPoint {
+                    date: a.date.clone(),
+                    value: a.message_count as f64,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn get_sessions_per_day_points(
+    activities: &[DailyActivity],
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Vec<DailyActivityPoint> {
+    activities
+        .iter()
+        .filter_map(|a| {
+            let date = NaiveDate::parse_from_str(&a.date, "%Y-%m-%d").ok()?;
+            if date >= start && date <= end {
+                Some(DailyActivityPoint {
+                    date: a.date.clone(),
+                    value: a.session_count as f64,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+pub fn compute_insights(period: &str, pricing_provider: &str) -> Result<InsightsData, String> {
+    let cache = load_stats_cache()?;
+    let (curr_start, curr_end, prev_start, prev_end) = get_period_dates(period);
+
+    // Calculate comparisons
+    let (curr_msgs, curr_sess) = sum_activity_in_range(&cache.daily_activity, curr_start, curr_end);
+    let (prev_msgs, prev_sess) = sum_activity_in_range(&cache.daily_activity, prev_start, prev_end);
+
+    let curr_tokens = sum_tokens_in_range(&cache.daily_model_tokens, curr_start, curr_end);
+    let prev_tokens = sum_tokens_in_range(&cache.daily_model_tokens, prev_start, prev_end);
+
+    let curr_cost = calculate_cost(curr_tokens, pricing_provider);
+    let prev_cost = calculate_cost(prev_tokens, pricing_provider);
+
+    let comparison = PeriodComparison {
+        messages: MetricComparison::new(curr_msgs as f64, prev_msgs as f64),
+        sessions: MetricComparison::new(curr_sess as f64, prev_sess as f64),
+        tokens: MetricComparison::new(curr_tokens as f64, prev_tokens as f64),
+        estimated_cost: MetricComparison::new(curr_cost, prev_cost),
+    };
+
+    // Calculate streak
+    let today = Local::now().date_naive();
+    let yesterday = today - Duration::days(1);
+    let mut sorted_dates: Vec<NaiveDate> = cache
+        .daily_activity
+        .iter()
+        .filter(|a| a.message_count > 0)
+        .filter_map(|a| NaiveDate::parse_from_str(&a.date, "%Y-%m-%d").ok())
+        .collect();
+    sorted_dates.sort();
+    sorted_dates.reverse();
+
+    let mut streak = 0u32;
+    let mut expected = yesterday;
+    for date in &sorted_dates {
+        if *date == expected || *date == today {
+            streak += 1;
+            expected = *date - Duration::days(1);
+        } else if *date < expected {
+            break;
+        }
+    }
+
+    let peak_activity = PeakActivity {
+        most_active_hour: find_peak_hour(&cache.hour_counts),
+        longest_session_minutes: cache
+            .longest_session
+            .as_ref()
+            .map(|s| (s.duration / 60000) as u32),
+        current_streak: streak,
+        member_since: cache.first_session_date.clone(),
+    };
+
+    let daily_activity = get_daily_activity_points(&cache.daily_activity, curr_start, curr_end);
+    let sessions_per_day = get_sessions_per_day_points(&cache.daily_activity, curr_start, curr_end);
+
+    Ok(InsightsData {
+        period: period.to_string(),
+        comparison,
+        daily_activity,
+        sessions_per_day,
+        peak_activity,
+    })
+}
+
+#[tauri::command]
+pub async fn get_insights_data(
+    period: String,
+    pricing_provider: String,
+) -> Result<InsightsData, String> {
+    compute_insights(&period, &pricing_provider)
 }
