@@ -9,3 +9,6 @@ export { default as PeriodSelector } from './PeriodSelector.svelte';
 export { default as ComparisonCard } from './ComparisonCard.svelte';
 export { default as SparklineChart } from './SparklineChart.svelte';
 export { default as InsightsView } from './InsightsView.svelte';
+export { default as SessionsTable } from './SessionsTable.svelte';
+export { default as SessionDetailModal } from './SessionDetailModal.svelte';
+export { default as SessionsView } from './SessionsView.svelte';
