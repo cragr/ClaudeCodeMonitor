@@ -6,3 +6,4 @@ export { default as ModelBreakdown } from './ModelBreakdown.svelte';
 export { default as SettingsModal } from './SettingsModal.svelte';
 export { default as TabNav } from './TabNav.svelte';
 export { default as PeriodSelector } from './PeriodSelector.svelte';
+export { default as ComparisonCard } from './ComparisonCard.svelte';
