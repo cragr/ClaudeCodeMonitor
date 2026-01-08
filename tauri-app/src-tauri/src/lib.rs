@@ -1,4 +1,5 @@
 mod commands;
+mod insights;
 mod metrics;
 mod prometheus;
 
