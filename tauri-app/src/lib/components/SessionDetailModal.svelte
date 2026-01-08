@@ -35,13 +35,13 @@
   }
 
   const typeColors: Record<string, string> = {
-    input: '#22d3ee',
-    output: '#a855f7',
-    cache_read: '#22c55e',
-    cache_creation: '#f59e0b',
+    input: '#5b9a8b',
+    output: '#9b7bb8',
+    cache_read: '#6b9b7a',
+    cache_creation: '#c9a855',
   };
 
-  const modelColors = ['#6366f1', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6'];
+  const modelColors = ['#6b8fc4', '#b87b9b', '#5b9a8b', '#c4896b', '#9b7bb8'];
 
   function createCharts() {
     if (!session) return;

@@ -67,7 +67,7 @@
             labels: metrics.tokensOverTime.map(p => new Date(p.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
             datasets: [{
               data: metrics.tokensOverTime.map(p => p.value),
-              borderColor: '#22d3ee',
+              borderColor: '#5b9a8b',
               backgroundColor: 'transparent',
               tension: 0.4,
               pointRadius: 0,
@@ -79,8 +79,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              x: { grid: { color: '#21262d' }, ticks: { color: '#7d8590', maxTicksLimit: 6 } },
-              y: { grid: { color: '#21262d' }, ticks: { color: '#7d8590' }, position: 'right' },
+              x: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9', maxTicksLimit: 6 } },
+              y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' }, position: 'right' },
             },
           },
         });
@@ -97,7 +97,7 @@
           datasets: metrics.tokensByModel.map((m, i) => ({
             label: m.model,
             data: metrics!.tokensOverTime.map(() => m.tokens / metrics!.tokensOverTime.length),
-            borderColor: ['#a855f7', '#22d3ee', '#22c55e'][i % 3],
+            borderColor: ['#9b7bb8', '#5b9a8b', '#6b9b7a'][i % 3],
             backgroundColor: 'transparent',
             tension: 0.4,
             pointRadius: 0,
@@ -107,10 +107,10 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: '#7d8590' } } },
+          plugins: { legend: { position: 'bottom', labels: { color: '#9aa0a9' } } },
           scales: {
-            x: { grid: { color: '#21262d' }, ticks: { color: '#7d8590', maxTicksLimit: 6 } },
-            y: { grid: { color: '#21262d' }, ticks: { color: '#7d8590' }, position: 'right' },
+            x: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9', maxTicksLimit: 6 } },
+            y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' }, position: 'right' },
           },
         },
       });

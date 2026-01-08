@@ -105,8 +105,8 @@
         <div class="h-px flex-1 bg-border-secondary"></div>
       </div>
       <div class="grid grid-cols-2 gap-4">
-        <SparklineChart title="Daily Activity" data={data.dailyActivity} color="#22d3ee" />
-        <SparklineChart title="Sessions/Day" data={data.sessionsPerDay} color="#a855f7" />
+        <SparklineChart title="Daily Activity" data={data.dailyActivity} color="#5b9a8b" />
+        <SparklineChart title="Sessions/Day" data={data.sessionsPerDay} color="#9b7bb8" />
       </div>
     </div>
 

@@ -83,8 +83,8 @@
       const ctx = costChartCanvas.getContext('2d');
       if (ctx) {
         const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, 'rgba(34, 197, 94, 0.3)');
-        gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+        gradient.addColorStop(0, 'rgba(107, 155, 122, 0.3)');
+        gradient.addColorStop(1, 'rgba(107, 155, 122, 0)');
 
         costChart = new Chart(costChartCanvas, {
           type: 'line',
@@ -95,7 +95,7 @@
             }),
             datasets: [{
               data: metrics.tokensOverTime.map(p => p.value * 0.00001), // Approximate cost
-              borderColor: '#22c55e',
+              borderColor: '#6b9b7a',
               backgroundColor: gradient,
               fill: true,
               tension: 0.4,
@@ -109,12 +109,12 @@
             plugins: { legend: { display: false } },
             scales: {
               x: {
-                grid: { color: '#21262d' },
-                ticks: { color: '#7d8590', maxTicksLimit: 6 },
+                grid: { color: '#2f343c' },
+                ticks: { color: '#9aa0a9', maxTicksLimit: 6 },
               },
               y: {
-                grid: { color: '#21262d' },
-                ticks: { color: '#7d8590', callback: (v) => `$${v}` },
+                grid: { color: '#2f343c' },
+                ticks: { color: '#9aa0a9', callback: (v) => `$${v}` },
                 position: 'right',
               },
             },
@@ -126,7 +126,7 @@
     // Model breakdown chart
     if (modelChartCanvas && metrics.tokensByModel.length > 0) {
       modelChart?.destroy();
-      const colors = ['#a855f7', '#3b82f6', '#22c55e', '#f97316', '#ec4899'];
+      const colors = ['#9b7bb8', '#6b8fc4', '#6b9b7a', '#c4896b', '#b87b9b'];
       modelChart = new Chart(modelChartCanvas, {
         type: 'doughnut',
         data: {
@@ -252,7 +252,7 @@
           </div>
           <div class="flex-1 space-y-3">
             {#each metrics.tokensByModel as model, i}
-              {@const colors = ['#a855f7', '#3b82f6', '#22c55e', '#f97316', '#ec4899']}
+              {@const colors = ['#9b7bb8', '#6b8fc4', '#6b9b7a', '#c4896b', '#b87b9b']}
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <div class="w-2 h-2 rounded-full" style="background-color: {colors[i % colors.length]}"></div>

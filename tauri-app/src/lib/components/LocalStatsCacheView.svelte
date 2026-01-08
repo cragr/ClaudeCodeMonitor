@@ -71,7 +71,7 @@
             labels: data.dailyActivity.slice(-30).map(d => d.date.slice(5)), // MM-DD format
             datasets: [{
               data: data.dailyActivity.slice(-30).map(d => d.value),
-              backgroundColor: '#22d3ee',
+              backgroundColor: '#5b9a8b',
               borderRadius: 2,
             }],
           },
@@ -80,8 +80,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#7d8590', maxTicksLimit: 10 } },
-              y: { grid: { color: '#21262d' }, ticks: { color: '#7d8590' } },
+              x: { grid: { display: false }, ticks: { color: '#9aa0a9', maxTicksLimit: 10 } },
+              y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' } },
             },
           },
         });
@@ -91,7 +91,7 @@
 
     // Model breakdown doughnut
     if (modelChartCanvas && data.tokensByModel.length > 0) {
-      const colors = ['#a855f7', '#22d3ee', '#22c55e', '#f97316', '#ec4899', '#3b82f6'];
+      const colors = ['#9b7bb8', '#5b9a8b', '#6b9b7a', '#c4896b', '#b87b9b', '#6b8fc4'];
       const chart = new Chart(modelChartCanvas, {
         type: 'doughnut',
         data: {
@@ -120,7 +120,7 @@
           labels: data.activityByHour.map(h => `${h.hour}:00`),
           datasets: [{
             data: data.activityByHour.map(h => h.count),
-            backgroundColor: '#a855f7',
+            backgroundColor: '#9b7bb8',
             borderRadius: 2,
           }],
         },
@@ -129,8 +129,8 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#7d8590', maxTicksLimit: 12 } },
-            y: { grid: { color: '#21262d' }, ticks: { color: '#7d8590' } },
+            x: { grid: { display: false }, ticks: { color: '#9aa0a9', maxTicksLimit: 12 } },
+            y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' } },
           },
         },
       });
@@ -201,7 +201,7 @@
             </div>
             <div class="flex-1 space-y-2">
               {#each data.tokensByModel as model, i}
-                {@const colors = ['#a855f7', '#22d3ee', '#22c55e', '#f97316', '#ec4899', '#3b82f6']}
+                {@const colors = ['#9b7bb8', '#5b9a8b', '#6b9b7a', '#c4896b', '#b87b9b', '#6b8fc4']}
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <div class="w-2 h-2 rounded-full" style="background-color: {colors[i % colors.length]}"></div>

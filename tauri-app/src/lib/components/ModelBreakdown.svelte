@@ -10,7 +10,7 @@
 
   Chart.register(...registerables);
 
-  const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
+  const colors = ['#9b7bb8', '#6b8fc4', '#5b9a8b', '#c4896b', '#b87b9b'];
 
   $: if (chart && data) {
     chart.data.labels = data.map((m) => m.model);
@@ -40,12 +40,12 @@
         },
         scales: {
           x: {
-            grid: { color: 'rgba(255,255,255,0.1)' },
-            ticks: { color: '#9ca3af' },
+            grid: { color: '#2f343c' },
+            ticks: { color: '#9aa0a9' },
           },
           y: {
             grid: { display: false },
-            ticks: { color: '#9ca3af' },
+            ticks: { color: '#9aa0a9' },
           },
         },
       },

@@ -4,36 +4,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Base colors
-        'bg-primary': '#0d1117',
-        'bg-secondary': '#161b22',
-        'bg-tertiary': '#1c2128',
-        'bg-card': '#161b22',
-        'bg-card-hover': '#1c2128',
+        // Background colors - neutral grays
+        'bg-primary': '#1a1d21',
+        'bg-secondary': '#22262b',
+        'bg-tertiary': '#282c33',
+        'bg-card': '#282c33',
+        'bg-card-hover': '#2f343c',
         // Border colors
-        'border-primary': '#30363d',
-        'border-secondary': '#21262d',
+        'border-primary': '#3d424a',
+        'border-secondary': '#2f343c',
+        'border-focus': '#5b9a8b',
         // Text colors
-        'text-primary': '#e6edf3',
-        'text-secondary': '#7d8590',
-        'text-muted': '#484f58',
-        // Accent colors
-        'accent-green': '#22c55e',
-        'accent-cyan': '#22d3ee',
-        'accent-purple': '#a855f7',
-        'accent-orange': '#f97316',
-        'accent-yellow': '#eab308',
-        'accent-red': '#ef4444',
-        'accent-blue': '#3b82f6',
-        'accent-pink': '#ec4899',
+        'text-primary': '#e8eaed',
+        'text-secondary': '#9aa0a9',
+        'text-muted': '#6b727c',
+        // Accent colors - muted palette
+        'accent-primary': '#5b9a8b',
+        'accent-green': '#6b9b7a',
+        'accent-cyan': '#5b9a8b',
+        'accent-purple': '#9b7bb8',
+        'accent-orange': '#c4896b',
+        'accent-yellow': '#c9a855',
+        'accent-red': '#c47272',
+        'accent-blue': '#6b8fc4',
+        'accent-pink': '#b87b9b',
         // Legacy aliases (for compatibility)
-        surface: '#0d1117',
-        'surface-light': '#161b22',
-        'surface-lighter': '#1c2128',
-        accent: '#22d3ee',
+        surface: '#1a1d21',
+        'surface-light': '#22262b',
+        'surface-lighter': '#282c33',
+        accent: '#5b9a8b',
       },
       fontFamily: {
-        mono: ['SF Mono', 'Monaco', 'Menlo', 'monospace'],
+        mono: ['SF Mono', 'Consolas', 'Monaco', 'Menlo', 'monospace'],
       },
     },
   },
