@@ -4,3 +4,4 @@ export { default as TimeRangePicker } from './TimeRangePicker.svelte';
 export { default as TokensChart } from './TokensChart.svelte';
 export { default as ModelBreakdown } from './ModelBreakdown.svelte';
 export { default as SettingsModal } from './SettingsModal.svelte';
+export { default as TabNav } from './TabNav.svelte';
