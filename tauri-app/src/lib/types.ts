@@ -79,3 +79,29 @@ export const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: 'last_7_days', label: 'Last 7 Days' },
   { value: 'this_month', label: 'This Month' },
 ];
+
+// Sessions types
+export interface SessionMetrics {
+  sessionId: string;
+  totalCostUsd: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  activeTimeSeconds: number;
+  tokensByModel: ModelTokenCount[];
+}
+
+export interface ModelTokenCount {
+  model: string;
+  tokens: number;
+}
+
+export interface SessionsData {
+  sessions: SessionMetrics[];
+  totalCount: number;
+}
+
+export type SessionSortField = 'cost' | 'tokens' | 'duration' | 'sessionId';
+export type SortDirection = 'asc' | 'desc';
