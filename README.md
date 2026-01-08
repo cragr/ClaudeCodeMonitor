@@ -169,6 +169,44 @@ If metrics aren't showing:
 - `app.version` - Claude Code version
 - `model` - Claude model used
 
+## Cross-Platform App (Tauri)
+
+The `tauri-app/` directory contains a cross-platform version built with Tauri 2 + Svelte that runs on macOS and Windows.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+
+- [pnpm](https://pnpm.io/)
+- [Rust](https://rustup.rs/)
+
+### Development
+
+```bash
+cd tauri-app
+pnpm install
+pnpm tauri dev
+```
+
+### Building
+
+```bash
+cd tauri-app
+pnpm tauri build
+```
+
+Build outputs:
+- macOS: `src-tauri/target/release/bundle/dmg/` (.dmg installer)
+- Windows: `src-tauri/target/release/bundle/msi/` (.msi installer)
+
+### Features
+
+- Dashboard with tokens, cost, active time, sessions, lines of code, commits
+- Tokens over time chart
+- Model breakdown chart
+- Settings modal with Prometheus connection test
+- System tray with quick access menu
+- Auto-updater support
+
 ## Troubleshooting
 
 ### "Not Connected" Error
