@@ -12,3 +12,4 @@ export { default as InsightsView } from './InsightsView.svelte';
 export { default as SessionsTable } from './SessionsTable.svelte';
 export { default as SessionDetailModal } from './SessionDetailModal.svelte';
 export { default as SessionsView } from './SessionsView.svelte';
+export { default as Sidebar } from './Sidebar.svelte';
