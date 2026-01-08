@@ -95,4 +95,29 @@ impl PrometheusClient {
         let response = self.client.get(&url).send().await?;
         Ok(response.status().is_success())
     }
+
+    pub async fn discover_metrics(&self) -> Result<Vec<String>, PrometheusError> {
+        // Query for all claude_code_ metrics
+        let url = format!("{}/api/v1/label/__name__/values", self.base_url);
+        let response: serde_json::Value = self.client.get(&url).send().await?.json().await?;
+
+        if response["status"] != "success" {
+            return Err(PrometheusError::InvalidResponse(
+                response["status"].to_string(),
+            ));
+        }
+
+        let metrics: Vec<String> = response["data"]
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .filter(|name| name.starts_with("claude_code_"))
+                    .map(|s| s.to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(metrics)
+    }
 }

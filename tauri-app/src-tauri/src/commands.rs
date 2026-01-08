@@ -212,3 +212,9 @@ pub async fn test_connection(url: String) -> Result<bool, String> {
     let client = PrometheusClient::new(&url);
     client.test_connection().await.map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn discover_metrics(url: String) -> Result<Vec<String>, String> {
+    let client = PrometheusClient::new(&url);
+    client.discover_metrics().await.map_err(|e| e.to_string())
+}

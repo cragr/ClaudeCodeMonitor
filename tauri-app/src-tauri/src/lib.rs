@@ -58,6 +58,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_metrics,
             commands::test_connection,
+            commands::discover_metrics,
             insights::get_insights_data,
             insights::get_local_stats_cache,
             sessions::get_sessions_data,
