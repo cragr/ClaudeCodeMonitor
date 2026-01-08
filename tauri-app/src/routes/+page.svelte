@@ -8,12 +8,15 @@
     TokensChart,
     ModelBreakdown,
     SettingsModal,
+    TabNav,
+    InsightsView,
   } from '$lib/components';
   import { metrics, isLoading, error, timeRange, isConnected } from '$lib/stores';
   import { settings } from '$lib/stores/settings';
   import type { DashboardMetrics, TimeRange } from '$lib/types';
 
   let showSettings = false;
+  let activeTab: 'dashboard' | 'insights' | 'sessions' = 'dashboard';
 
   async function fetchMetrics() {
     $isLoading = true;
@@ -37,6 +40,10 @@
   function handleTimeRangeChange(value: TimeRange) {
     $timeRange = value;
     fetchMetrics();
+  }
+
+  function handleTabChange(tab: 'dashboard' | 'insights' | 'sessions') {
+    activeTab = tab;
   }
 
   function formatTokens(n: number): string {
@@ -67,10 +74,12 @@
 
 <main class="min-h-screen bg-surface p-6">
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex items-center justify-between mb-4">
     <h1 class="text-xl font-bold text-white">Claude Code Monitor</h1>
     <div class="flex items-center gap-4">
-      <TimeRangePicker value={$timeRange} onChange={handleTimeRangeChange} />
+      {#if activeTab === 'dashboard'}
+        <TimeRangePicker value={$timeRange} onChange={handleTimeRangeChange} />
+      {/if}
       <button
         on:click={() => (showSettings = !showSettings)}
         class="text-gray-400 hover:text-white transition-colors"
@@ -85,58 +94,70 @@
     </div>
   </div>
 
-  <!-- Error Banner -->
-  {#if $error}
-    <div class="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-6">
-      <p class="text-red-200">{$error}</p>
-    </div>
-  {/if}
+  <!-- Tab Navigation -->
+  <TabNav {activeTab} onTabChange={handleTabChange} />
 
-  <!-- Loading State -->
-  {#if $isLoading && !$metrics}
+  <!-- Tab Content -->
+  {#if activeTab === 'dashboard'}
+    <!-- Error Banner -->
+    {#if $error}
+      <div class="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-6">
+        <p class="text-red-200">{$error}</p>
+      </div>
+    {/if}
+
+    <!-- Loading State -->
+    {#if $isLoading && !$metrics}
+      <div class="flex items-center justify-center h-64">
+        <div class="text-gray-400">Loading metrics...</div>
+      </div>
+    {:else if $metrics}
+      <!-- Metric Cards Grid -->
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <MetricCard
+          label="Tokens"
+          value={formatTokens($metrics.totalTokens)}
+        />
+        <MetricCard
+          label="Cost"
+          value={formatCost($metrics.totalCostUsd)}
+        />
+        <MetricCard
+          label="Active Time"
+          value={formatTime($metrics.activeTimeSeconds)}
+        />
+        <MetricCard
+          label="Sessions"
+          value={$metrics.sessionCount.toString()}
+        />
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <MetricCard
+          label="Lines Added"
+          value={`+${$metrics.linesAdded.toLocaleString()}`}
+        />
+        <MetricCard
+          label="Lines Removed"
+          value={`-${$metrics.linesRemoved.toLocaleString()}`}
+        />
+        <MetricCard
+          label="Commits"
+          value={$metrics.commitCount.toString()}
+        />
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 gap-6">
+        <TokensChart data={$metrics.tokensOverTime} />
+        <ModelBreakdown data={$metrics.tokensByModel} />
+      </div>
+    {/if}
+  {:else if activeTab === 'insights'}
+    <InsightsView />
+  {:else if activeTab === 'sessions'}
     <div class="flex items-center justify-center h-64">
-      <div class="text-gray-400">Loading metrics...</div>
-    </div>
-  {:else if $metrics}
-    <!-- Metric Cards Grid -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
-      <MetricCard
-        label="Tokens"
-        value={formatTokens($metrics.totalTokens)}
-      />
-      <MetricCard
-        label="Cost"
-        value={formatCost($metrics.totalCostUsd)}
-      />
-      <MetricCard
-        label="Active Time"
-        value={formatTime($metrics.activeTimeSeconds)}
-      />
-      <MetricCard
-        label="Sessions"
-        value={$metrics.sessionCount.toString()}
-      />
-    </div>
-
-    <div class="grid grid-cols-3 gap-4 mb-6">
-      <MetricCard
-        label="Lines Added"
-        value={`+${$metrics.linesAdded.toLocaleString()}`}
-      />
-      <MetricCard
-        label="Lines Removed"
-        value={`-${$metrics.linesRemoved.toLocaleString()}`}
-      />
-      <MetricCard
-        label="Commits"
-        value={$metrics.commitCount.toString()}
-      />
-    </div>
-
-    <!-- Charts -->
-    <div class="grid grid-cols-1 gap-6">
-      <TokensChart data={$metrics.tokensOverTime} />
-      <ModelBreakdown data={$metrics.tokensByModel} />
+      <div class="text-gray-400">Sessions view coming soon...</div>
     </div>
   {/if}
 </main>
