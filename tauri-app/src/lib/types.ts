@@ -105,3 +105,28 @@ export interface SessionsData {
 
 export type SessionSortField = 'cost' | 'tokens' | 'duration' | 'sessionId';
 export type SortDirection = 'asc' | 'desc';
+
+// Local Stats Cache types
+export interface LocalStatsCacheData {
+  totalTokens: number;
+  totalSessions: number;
+  totalMessages: number;
+  activeDays: number;
+  avgMessagesPerDay: number;
+  estimatedCost: number;
+  peakHour: number | null;
+  firstSession: string | null;
+  dailyActivity: DailyActivityPoint[];
+  tokensByModel: ModelTokensData[];
+  activityByHour: HourActivity[];
+}
+
+export interface ModelTokensData {
+  model: string;
+  tokens: number;
+}
+
+export interface HourActivity {
+  hour: number;
+  count: number;
+}

@@ -17,3 +17,4 @@ export { default as ViewHeader } from './ViewHeader.svelte';
 export { default as HeroCard } from './HeroCard.svelte';
 export { default as SummaryView } from './SummaryView.svelte';
 export { default as TokenMetricsView } from './TokenMetricsView.svelte';
+export { default as LocalStatsCacheView } from './LocalStatsCacheView.svelte';

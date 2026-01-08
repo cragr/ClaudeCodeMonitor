@@ -323,3 +323,111 @@ pub async fn get_insights_data(
 ) -> Result<InsightsData, String> {
     compute_insights(&period, &pricing_provider)
 }
+
+/// Response type for local stats cache view
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalStatsCacheData {
+    pub total_tokens: u64,
+    pub total_sessions: u32,
+    pub total_messages: u32,
+    pub active_days: u32,
+    pub avg_messages_per_day: f64,
+    pub estimated_cost: f64,
+    pub peak_hour: Option<u32>,
+    pub first_session: Option<String>,
+    pub daily_activity: Vec<DailyActivityPoint>,
+    pub tokens_by_model: Vec<ModelTokens>,
+    pub activity_by_hour: Vec<HourActivity>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelTokens {
+    pub model: String,
+    pub tokens: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HourActivity {
+    pub hour: u32,
+    pub count: u32,
+}
+
+#[tauri::command]
+pub async fn get_local_stats_cache(pricing_provider: String) -> Result<LocalStatsCacheData, String> {
+    let cache = load_stats_cache()?;
+
+    // Calculate totals
+    let total_tokens: u64 = cache.daily_model_tokens
+        .as_ref()
+        .map(|days| days.iter().map(|d| d.tokens_by_model.values().sum::<u64>()).sum())
+        .unwrap_or(0);
+
+    let total_messages: u32 = cache.daily_activity.iter().map(|d| d.message_count).sum();
+    let total_sessions = cache.total_sessions;
+    let active_days = cache.daily_activity.iter().filter(|d| d.message_count > 0).count() as u32;
+
+    let avg_messages_per_day = if active_days > 0 {
+        total_messages as f64 / active_days as f64
+    } else {
+        0.0
+    };
+
+    let estimated_cost = calculate_cost(total_tokens, &pricing_provider);
+    let peak_hour = find_peak_hour(&cache.hour_counts);
+
+    // Get all daily activity
+    let daily_activity: Vec<DailyActivityPoint> = cache.daily_activity
+        .iter()
+        .map(|a| DailyActivityPoint {
+            date: a.date.clone(),
+            value: a.message_count as f64,
+        })
+        .collect();
+
+    // Get tokens by model
+    let tokens_by_model: Vec<ModelTokens> = cache.daily_model_tokens
+        .as_ref()
+        .map(|days| {
+            let mut model_totals: HashMap<String, u64> = HashMap::new();
+            for day in days {
+                for (model, tokens) in &day.tokens_by_model {
+                    *model_totals.entry(model.clone()).or_insert(0) += tokens;
+                }
+            }
+            let mut result: Vec<_> = model_totals.into_iter()
+                .map(|(model, tokens)| ModelTokens { model, tokens })
+                .collect();
+            result.sort_by(|a, b| b.tokens.cmp(&a.tokens));
+            result
+        })
+        .unwrap_or_default();
+
+    // Get activity by hour
+    let activity_by_hour: Vec<HourActivity> = cache.hour_counts
+        .as_ref()
+        .map(|counts| {
+            let mut result: Vec<_> = counts.iter()
+                .filter_map(|(h, &count)| h.parse::<u32>().ok().map(|hour| HourActivity { hour, count }))
+                .collect();
+            result.sort_by_key(|a| a.hour);
+            result
+        })
+        .unwrap_or_default();
+
+    Ok(LocalStatsCacheData {
+        total_tokens,
+        total_sessions,
+        total_messages,
+        active_days,
+        avg_messages_per_day,
+        estimated_cost,
+        peak_hour,
+        first_session: cache.first_session_date,
+        daily_activity,
+        tokens_by_model,
+        activity_by_hour,
+    })
+}
