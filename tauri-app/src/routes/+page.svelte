@@ -7,6 +7,7 @@
     TimeRangePicker,
     TokensChart,
     ModelBreakdown,
+    SettingsModal,
   } from '$lib/components';
   import { metrics, isLoading, error, timeRange, isConnected } from '$lib/stores';
   import { settings } from '$lib/stores/settings';
@@ -139,3 +140,5 @@
     </div>
   {/if}
 </main>
+
+<SettingsModal open={showSettings} onClose={() => (showSettings = false)} />
