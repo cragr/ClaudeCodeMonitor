@@ -8,3 +8,4 @@ export { default as TabNav } from './TabNav.svelte';
 export { default as PeriodSelector } from './PeriodSelector.svelte';
 export { default as ComparisonCard } from './ComparisonCard.svelte';
 export { default as SparklineChart } from './SparklineChart.svelte';
+export { default as InsightsView } from './InsightsView.svelte';
