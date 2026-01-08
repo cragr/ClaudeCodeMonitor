@@ -2,6 +2,7 @@ mod commands;
 mod insights;
 mod metrics;
 mod prometheus;
+mod sessions;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -58,6 +59,7 @@ pub fn run() {
             commands::get_dashboard_metrics,
             commands::test_connection,
             insights::get_insights_data,
+            sessions::get_sessions_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
