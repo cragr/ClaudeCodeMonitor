@@ -15,3 +15,4 @@ export { default as SessionsView } from './SessionsView.svelte';
 export { default as Sidebar } from './Sidebar.svelte';
 export { default as ViewHeader } from './ViewHeader.svelte';
 export { default as HeroCard } from './HeroCard.svelte';
+export { default as SummaryView } from './SummaryView.svelte';
