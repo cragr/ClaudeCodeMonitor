@@ -7,6 +7,7 @@
     SessionsView,
     LocalStatsCacheView,
     SmokeTestView,
+    PrometheusHealthView,
     SettingsModal,
   } from '$lib/components';
   import { isConnected } from '$lib/stores';
@@ -44,6 +45,8 @@
       <SessionsView />
     {:else if activeView === 'stats-cache'}
       <LocalStatsCacheView />
+    {:else if activeView === 'prometheus-health'}
+      <PrometheusHealthView />
     {:else if activeView === 'smoke-test'}
       <SmokeTestView />
     {/if}

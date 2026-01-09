@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrometheusError {
@@ -38,8 +39,14 @@ pub struct PrometheusClient {
 
 impl PrometheusClient {
     pub fn new(base_url: &str) -> Self {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(5))
+            .connect_timeout(Duration::from_secs(3))
+            .build()
+            .unwrap_or_else(|_| Client::new());
+
         Self {
-            client: Client::new(),
+            client,
             base_url: base_url.trim_end_matches('/').to_string(),
         }
     }

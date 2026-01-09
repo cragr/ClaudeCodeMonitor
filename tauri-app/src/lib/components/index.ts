@@ -18,3 +18,4 @@ export { default as SummaryView } from './SummaryView.svelte';
 export { default as TokenMetricsView } from './TokenMetricsView.svelte';
 export { default as LocalStatsCacheView } from './LocalStatsCacheView.svelte';
 export { default as SmokeTestView } from './SmokeTestView.svelte';
+export { default as PrometheusHealthView } from './PrometheusHealthView.svelte';

@@ -105,8 +105,25 @@
       '4h': 'Past 4 hours',
       '1d': 'Past day',
       '7d': 'Past week',
+      '30d': 'Past month',
+      '90d': 'Past 3 months',
     };
     return labels[range as Exclude<TimeRange, 'custom'>] || 'Custom range';
+  }
+
+  // Consolidate models by friendly name
+  function getConsolidatedModels(): { model: string; tokens: number }[] {
+    if (!metrics) return [];
+
+    const consolidated = new Map<string, number>();
+    for (const m of metrics.tokensByModel) {
+      const friendlyName = formatModelName(m.model);
+      consolidated.set(friendlyName, (consolidated.get(friendlyName) || 0) + m.tokens);
+    }
+
+    return Array.from(consolidated.entries())
+      .map(([model, tokens]) => ({ model, tokens }))
+      .sort((a, b) => b.tokens - a.tokens);
   }
 
   function updateCharts() {
@@ -177,47 +194,33 @@
       }
     }
 
-    // Tokens by model - horizontal bar chart
-    if (tokensByModelCanvas && metrics.tokensByModel.length > 0) {
+    // Tokens by model - doughnut chart (using consolidated models)
+    const consolidatedModels = getConsolidatedModels();
+    if (tokensByModelCanvas && consolidatedModels.length > 0) {
       const chartColors = [colors.mauve, colors.sky, colors.green, colors.peach, colors.pink];
 
       const chart = new Chart(tokensByModelCanvas, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-          labels: metrics.tokensByModel.map(m => formatModelName(m.model)),
+          labels: consolidatedModels.map(m => m.model),
           datasets: [{
-            data: metrics.tokensByModel.map(m => m.tokens),
-            backgroundColor: metrics.tokensByModel.map((_, i) => chartColors[i % chartColors.length]),
-            borderColor: metrics.tokensByModel.map((_, i) => chartColors[i % chartColors.length]),
-            borderWidth: 1,
-            borderRadius: 4,
+            data: consolidatedModels.map(m => m.tokens),
+            backgroundColor: chartColors.slice(0, consolidatedModels.length),
+            borderWidth: 0,
           }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          indexAxis: 'y',
+          cutout: '70%',
           plugins: { legend: { display: false } },
-          scales: {
-            x: {
-              grid: { color: 'rgba(142, 142, 147, 0.2)' },
-              ticks: {
-                color: colors.overlay0,
-                font: { size: 10 },
-                callback: (v) => formatTokens(Number(v)),
-              },
-              beginAtZero: true,
-            },
-            y: {
-              grid: { display: false },
-              ticks: { color: colors.subtext1, font: { size: 10 } },
-            },
-          },
         },
       });
       charts.push(chart);
     }
   }
+
+  const chartColors = [colors.mauve, colors.sky, colors.green, colors.peach, colors.pink];
 
   onMount(() => {
     fetchMetrics();
@@ -275,11 +278,28 @@
 
     <!-- Tokens By Model -->
     <div class="bg-bg-card rounded-md p-4">
-      <div class="flex items-center justify-between mb-1">
+      <div class="mb-3 text-center">
         <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Tokens By Model</span>
-        <span class="text-xs text-text-muted">comparison</span>
+        <span class="text-xs text-text-muted ml-2">breakdown</span>
       </div>
-      <div class="h-40"><canvas bind:this={tokensByModelCanvas}></canvas></div>
+      <div class="flex items-center justify-center gap-8">
+        <!-- Doughnut chart -->
+        <div class="w-32 h-32 flex-shrink-0">
+          <canvas bind:this={tokensByModelCanvas}></canvas>
+        </div>
+        <!-- Legend with token counts -->
+        <div class="space-y-2">
+          {#each getConsolidatedModels().slice(0, 5) as model, i}
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {chartColors[i % chartColors.length]}"></div>
+                <span class="text-sm font-medium text-text-secondary">{model.model}</span>
+              </div>
+              <span class="text-sm font-bold text-text-primary">{formatTokens(model.tokens)}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
     </div>
   {/if}
 </div>

@@ -221,14 +221,14 @@
   {:else if data}
     <!-- Summary Cards - 8 cards in 2 rows of 4 -->
     <div class="grid grid-cols-4 gap-2 mb-3">
+      <MetricCard label="Est. Cost" value={formatCost(data.estimatedCost)} subtitle="all time" color="green" highlight={true} />
       <MetricCard label="Total Tokens" value={formatTokens(data.totalTokens)} subtitle="all time" color="cyan" highlight={true} />
       <MetricCard label="Sessions" value={data.totalSessions.toString()} subtitle="all time" color="green" />
       <MetricCard label="Active Days" value={data.activeDays.toString()} subtitle="days used" color="yellow" />
-      <MetricCard label="Avg/Day" value={data.avgMessagesPerDay.toFixed(1)} subtitle="messages" color="orange" />
     </div>
     <div class="grid grid-cols-4 gap-2 mb-3">
       <MetricCard label="Messages" value={data.totalMessages.toLocaleString()} subtitle="all time" color="purple" />
-      <MetricCard label="Est. Cost" value={formatCost(data.estimatedCost)} subtitle="all time" color="green" highlight={true} />
+      <MetricCard label="Avg/Day" value={data.avgMessagesPerDay.toFixed(1)} subtitle="messages" color="orange" />
       <MetricCard label="Peak Hour" value={formatHour(data.peakHour)} subtitle="most active" color="cyan" />
       <MetricCard label="First Session" value={formatDate(data.firstSession)} subtitle="started using" color="blue" />
     </div>

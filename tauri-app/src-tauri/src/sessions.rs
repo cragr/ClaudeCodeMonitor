@@ -82,6 +82,7 @@ fn time_range_to_millis(range: &str) -> i64 {
         "2d" => 48,
         "7d" => 168,
         "30d" => 720,
+        "90d" => 2160,
         _ => 24,
     };
     hours * 60 * 60 * 1000
@@ -95,6 +96,7 @@ fn time_range_to_promql(range: &str) -> &str {
         "2d" => "2d",
         "7d" => "7d",
         "30d" => "30d",
+        "90d" => "90d",
         _ => "24h",
     }
 }

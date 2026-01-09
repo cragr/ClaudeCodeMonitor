@@ -32,7 +32,7 @@ export interface Settings {
   pricingProvider: 'anthropic' | 'aws-bedrock' | 'google-vertex';
 }
 
-export type TimeRange = '15m' | '1h' | '4h' | '1d' | '7d' | 'custom';
+export type TimeRange = '15m' | '1h' | '4h' | '1d' | '7d' | '30d' | '90d' | 'custom';
 
 export interface CustomTimeRange {
   start: number; // Unix timestamp in seconds
@@ -45,6 +45,8 @@ export const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
   { value: '4h', label: 'Last 4 Hours' },
   { value: '1d', label: 'Last Day' },
   { value: '7d', label: 'Last Week' },
+  { value: '30d', label: 'Last Month' },
+  { value: '90d', label: 'Last 3 Months' },
   { value: 'custom', label: 'Custom Range' },
 ];
 
@@ -151,4 +153,54 @@ export interface ModelTokensData {
 export interface HourActivity {
   hour: number;
   count: number;
+}
+
+// Prometheus Health types
+export interface PrometheusHealthMetrics {
+  // Status
+  isReady: boolean;
+  uptimeSeconds: number;
+  version: string;
+  goVersion: string;
+
+  // Storage
+  storageBlocksBytes: number;
+  storageWalBytes: number;
+  storageTotalBytes: number;
+  storageRetentionLimitBytes: number;
+  storageRetentionLimitSeconds: number;
+  headSeries: number;
+  oldestTimestampSeconds: number;
+  newestTimestampSeconds: number;
+  blocksLoaded: number;
+
+  // Memory
+  processMemoryBytes: number;
+  heapInuseBytes: number;
+  heapAllocBytes: number;
+  goroutines: number;
+
+  // CPU
+  cpuSecondsRate: number;
+
+  // Ingestion rates
+  samplesAppendedRate: number;
+  seriesCreatedRate: number;
+
+  // Scrape stats
+  targetCount: number;
+  scrapeDurationSeconds: number;
+  scrapeSamples: number;
+
+  // Health indicators
+  compactionsFailed: number;
+  compactionsTotal: number;
+  walCorruptions: number;
+  configReloadSuccess: boolean;
+  configReloadTimestamp: number;
+
+  // Time series for sparklines
+  storageOverTime: TimeSeriesPoint[];
+  memoryOverTime: TimeSeriesPoint[];
+  samplesRateOverTime: TimeSeriesPoint[];
 }

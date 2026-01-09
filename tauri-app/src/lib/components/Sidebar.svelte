@@ -37,6 +37,7 @@
     'insights': { border: '#a855f7', glow: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' },    // Purple - analysis
     'sessions': { border: '#ff6b9d', glow: 'rgba(255, 107, 157, 0.15)', text: '#ff6b9d' },    // Pink - activity
     'stats-cache': { border: '#007aff', glow: 'rgba(0, 122, 255, 0.15)', text: '#007aff' },  // Blue - data
+    'prometheus-health': { border: '#ff6b6b', glow: 'rgba(255, 107, 107, 0.15)', text: '#ff6b6b' }, // Red - infrastructure
     'smoke-test': { border: '#ffb347', glow: 'rgba(255, 179, 71, 0.15)', text: '#ffb347' }, // Orange - developer
   };
 
@@ -51,6 +52,7 @@
   ];
 
   const developerItems = [
+    { id: 'prometheus-health', label: 'Prometheus Health', icon: 'heartbeat', description: 'Monitor local Prometheus instance' },
     { id: 'smoke-test', label: 'Smoke Test', icon: 'flask', description: 'Debug and test connectivity' },
   ];
 
@@ -66,6 +68,7 @@
       terminal: 'M4 17l6-6-6-6m8 14h8',
       database: 'M12 2C6.48 2 2 4.24 2 7v10c0 2.76 4.48 5 10 5s10-2.24 10-5V7c0-2.76-4.48-5-10-5zm0 3c4.42 0 8 1.79 8 4s-3.58 4-8 4-8-1.79-8-4 3.58-4 8-4z',
       flask: 'M9 3h6v2H9V3zm1 2v5.17l-5 8.33V20h14v-1.5l-5-8.33V5h-4z',
+      heartbeat: 'M22 12h-4l-3 9L9 3l-3 9H2M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 .53-.06 1.05-.17 1.54',
     };
     return icons[name] || icons.grid;
   }

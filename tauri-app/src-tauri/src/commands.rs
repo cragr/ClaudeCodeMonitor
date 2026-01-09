@@ -1,5 +1,6 @@
 use crate::metrics::{DashboardMetrics, ModelTokens, TimeSeriesPoint};
 use crate::prometheus::PrometheusClient;
+use crate::prometheus_health::{fetch_prometheus_health, PrometheusHealthMetrics};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn time_range_to_seconds(range: &str) -> i64 {
@@ -9,6 +10,8 @@ fn time_range_to_seconds(range: &str) -> i64 {
         "4h" => 4 * 3600,
         "1d" => 24 * 3600,
         "7d" => 7 * 24 * 3600,
+        "30d" => 30 * 24 * 3600,
+        "90d" => 90 * 24 * 3600,
         _ => 15 * 60,
     }
 }
@@ -20,6 +23,8 @@ fn time_range_to_promql(range: &str) -> &str {
         "4h" => "4h",
         "1d" => "1d",
         "7d" => "7d",
+        "30d" => "30d",
+        "90d" => "90d",
         _ => "15m",
     }
 }
@@ -239,35 +244,43 @@ pub async fn get_dashboard_metrics(
         .collect();
 
     // Query for tokens over time with resolution based on time range
-    // 15m, 1h -> 1 minute intervals
-    // 4h -> 5 minute intervals
-    // 1d -> 1 hour intervals
-    // 7d -> 1 day intervals
-    let step = match time_range.as_str() {
-        "15m" => "1m",
-        "1h" => "1m",
-        "4h" => "5m",
-        "1d" => "1h",
-        "7d" => "1d",
+    // 15m, 1h -> 1 minute intervals with 5m rate window
+    // 4h -> 5 minute intervals with 5m rate window
+    // 1d -> 1 hour intervals with 1h rate window
+    // 7d -> 6 hour intervals with 6h rate window
+    // 30d -> 1 day intervals with 1d rate window
+    // 90d -> 3 day intervals with 3d rate window
+    let (step, rate_window) = match time_range.as_str() {
+        "15m" => ("1m", "5m"),
+        "1h" => ("1m", "5m"),
+        "4h" => ("5m", "5m"),
+        "1d" => ("1h", "1h"),
+        "7d" => ("6h", "6h"),
+        "30d" => ("1d", "1d"),
+        "90d" => ("3d", "3d"),
         "custom" => {
-            // For custom ranges, choose step based on duration
+            // For custom ranges, choose step and rate window based on duration
             let duration = end_time - start_time;
             if duration <= 3600 {
-                "1m"
+                ("1m", "5m")
             } else if duration <= 4 * 3600 {
-                "5m"
+                ("5m", "5m")
             } else if duration <= 24 * 3600 {
-                "1h"
+                ("1h", "1h")
+            } else if duration <= 7 * 24 * 3600 {
+                ("6h", "6h")
+            } else if duration <= 30 * 24 * 3600 {
+                ("1d", "1d")
             } else {
-                "1d"
+                ("3d", "3d")
             }
         }
-        _ => "1m",
+        _ => ("1m", "5m"),
     };
 
-    // Query rate per step interval using rate() with fixed 5m window (matching Swift app)
+    // Query rate per step interval using rate() with window matching step size
     // This gives us per-second rate, frontend does cumulative sum and scales to match total
-    let range_query = "sum(rate(claude_code_cost_usage_USD_total[5m]))".to_string();
+    let range_query = format!("sum(rate(claude_code_cost_usage_USD_total[{}]))", rate_window);
 
     let query_result = client
         .query_range(&range_query, start_time, end_time, step)
@@ -316,4 +329,44 @@ pub async fn test_connection(url: String) -> Result<bool, String> {
 pub async fn discover_metrics(url: String) -> Result<Vec<String>, String> {
     let client = PrometheusClient::new(&url);
     client.discover_metrics().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_prometheus_health(
+    prometheus_url: String,
+    time_range: Option<String>,
+    custom_start: Option<i64>,
+    custom_end: Option<i64>,
+) -> Result<PrometheusHealthMetrics, String> {
+    println!("get_prometheus_health: starting");
+    let client = PrometheusClient::new(&prometheus_url);
+
+    // Calculate time range for sparklines
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    let (start_time, end_time) = if time_range.as_deref() == Some("custom") {
+        let start = custom_start.ok_or("Custom start time required")?;
+        let end = custom_end.ok_or("Custom end time required")?;
+        (start, end)
+    } else {
+        let duration = match time_range.as_deref() {
+            Some("15m") => 15 * 60,
+            Some("1h") => 3600,
+            Some("4h") => 4 * 3600,
+            Some("1d") => 24 * 3600,
+            Some("7d") => 7 * 24 * 3600,
+            Some("30d") => 30 * 24 * 3600,
+            Some("90d") => 90 * 24 * 3600,
+            _ => 3600, // Default to 1 hour
+        };
+        (now - duration, now)
+    };
+
+    println!("get_prometheus_health: calling fetch_prometheus_health");
+    let result = fetch_prometheus_health(&client, start_time, end_time).await;
+    println!("get_prometheus_health: fetch_prometheus_health returned");
+    result
 }

@@ -2,6 +2,7 @@ mod commands;
 mod insights;
 mod metrics;
 mod prometheus;
+mod prometheus_health;
 mod sessions;
 
 use tauri::{
@@ -59,6 +60,7 @@ pub fn run() {
             commands::get_dashboard_metrics,
             commands::test_connection,
             commands::discover_metrics,
+            commands::get_prometheus_health,
             insights::get_insights_data,
             insights::get_local_stats_cache,
             sessions::get_sessions_data,

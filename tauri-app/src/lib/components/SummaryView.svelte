@@ -112,6 +112,8 @@
       '4h': 'Past 4 hours',
       '1d': 'Past day',
       '7d': 'Past week',
+      '30d': 'Past month',
+      '90d': 'Past 3 months',
     };
     return labels[range as Exclude<TimeRange, 'custom'>] || 'Custom range';
   }
@@ -142,6 +144,27 @@
     }
     // Fallback: return last part of model name
     return modelName.split('.').pop() || modelName;
+  }
+
+  // Consolidate models by friendly name
+  function getConsolidatedModels(): { model: string; tokens: number }[] {
+    if (!metrics) return [];
+
+    const consolidated = new Map<string, number>();
+    for (const m of metrics.tokensByModel) {
+      const friendlyName = formatModelName(m.model);
+      consolidated.set(friendlyName, (consolidated.get(friendlyName) || 0) + m.tokens);
+    }
+
+    return Array.from(consolidated.entries())
+      .map(([model, tokens]) => ({ model, tokens }))
+      .sort((a, b) => b.tokens - a.tokens);
+  }
+
+  function getCostByConsolidatedModel(model: { model: string; tokens: number }): number {
+    if (!metrics || metrics.totalTokens === 0) return 0;
+    const proportion = model.tokens / metrics.totalTokens;
+    return metrics.totalCostUsd * proportion;
   }
 
   function updateCharts() {
@@ -222,19 +245,20 @@
       }
     }
 
-    // Model breakdown chart
-    if (modelChartCanvas && metrics.tokensByModel.length > 0) {
+    // Model breakdown chart (using consolidated models)
+    const consolidatedModels = getConsolidatedModels();
+    if (modelChartCanvas && consolidatedModels.length > 0) {
       modelChart?.destroy();
       const chartColors = [colors.mauve, colors.sky, colors.green, colors.peach, colors.pink];
-      const costData = metrics.tokensByModel.map(m => getCostByModel(m));
+      const costData = consolidatedModels.map(m => getCostByConsolidatedModel(m));
 
       modelChart = new Chart(modelChartCanvas, {
         type: 'doughnut',
         data: {
-          labels: metrics.tokensByModel.map(m => m.model),
+          labels: consolidatedModels.map(m => m.model),
           datasets: [{
             data: costData,
-            backgroundColor: chartColors.slice(0, metrics.tokensByModel.length),
+            backgroundColor: chartColors.slice(0, consolidatedModels.length),
             borderWidth: 0,
           }],
         },
@@ -339,12 +363,12 @@
           <canvas bind:this={modelChartCanvas}></canvas>
         </div>
         <div class="space-y-3">
-          {#each metrics.tokensByModel.slice(0, 5) as model, i}
-            {@const modelCost = getCostByModel(model)}
+          {#each getConsolidatedModels().slice(0, 5) as model, i}
+            {@const modelCost = getCostByConsolidatedModel(model)}
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-2">
                 <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {chartColors[i % chartColors.length]}"></div>
-                <span class="text-lg font-bold text-text-secondary min-w-[120px]">{formatModelName(model.model)}</span>
+                <span class="text-lg font-bold text-text-secondary min-w-[120px]">{model.model}</span>
               </div>
               <span class="text-lg font-bold text-text-primary flex-shrink-0">{formatCost(modelCost)}</span>
             </div>
