@@ -55,11 +55,31 @@
       totalCost.set(metrics.totalCostUsd);
       isConnected.set(true);
       lastUpdated.set(new Date());
+
+      // Update system tray with cost and connection status
+      try {
+        await invoke('update_tray_stats', {
+          totalCost: metrics.totalCostUsd,
+          isConnected: true,
+        });
+      } catch {
+        // Silently ignore tray update errors (e.g., on Windows where title may not be supported)
+      }
+
       await tick();
       updateCharts();
     } catch (e) {
       error = e as string;
       isConnected.set(false);
+      // Update tray to show disconnected status
+      try {
+        await invoke('update_tray_stats', {
+          totalCost: 0,
+          isConnected: false,
+        });
+      } catch {
+        // Silently ignore tray update errors
+      }
     } finally {
       loading = false;
     }

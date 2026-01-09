@@ -4,12 +4,15 @@ mod metrics;
 mod prometheus;
 mod prometheus_health;
 mod sessions;
+mod tray;
 
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Manager, State,
 };
+
+use tray::TrayState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -17,15 +20,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(TrayState::new())
         .setup(|app| {
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Open Dashboard", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(false)
+                .title("🔴 --") // Initial placeholder (red = not connected yet)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
                         app.exit(0);
@@ -54,6 +59,12 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Store tray handle in state for later updates
+            let tray_state: State<TrayState> = app.state();
+            if let Ok(mut guard) = tray_state.tray.lock() {
+                *guard = Some(tray);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -64,6 +75,7 @@ pub fn run() {
             insights::get_insights_data,
             insights::get_local_stats_cache,
             sessions::get_sessions_data,
+            tray::update_tray_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
