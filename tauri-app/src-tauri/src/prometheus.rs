@@ -19,6 +19,7 @@ pub struct QueryResponse {
 #[derive(Debug, Deserialize)]
 pub struct QueryData {
     #[serde(rename = "resultType")]
+    #[allow(dead_code)]
     pub result_type: String,
     pub result: Vec<QueryResult>,
 }

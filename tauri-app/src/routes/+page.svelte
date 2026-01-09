@@ -4,7 +4,6 @@
     Sidebar,
     SummaryView,
     TokenMetricsView,
-    InsightsView,
     SessionsView,
     LocalStatsCacheView,
     SmokeTestView,
@@ -14,14 +13,9 @@
 
   let activeView = 'summary';
   let showSettings = false;
-  let totalCost = 0;
 
   function handleNavigate(view: string) {
     activeView = view;
-  }
-
-  function handleCostUpdate(cost: number) {
-    totalCost = cost;
   }
 
   // Listen for keyboard shortcut to open settings
@@ -39,15 +33,13 @@
 </script>
 
 <div class="flex h-screen bg-bg-primary">
-  <Sidebar {activeView} onNavigate={handleNavigate} {totalCost} />
+  <Sidebar {activeView} onNavigate={handleNavigate} />
 
-  <main class="flex-1 overflow-y-auto p-6">
+  <main class="flex-1 overflow-y-auto p-4">
     {#if activeView === 'summary'}
-      <SummaryView onCostUpdate={handleCostUpdate} />
+      <SummaryView />
     {:else if activeView === 'tokens'}
       <TokenMetricsView />
-    {:else if activeView === 'insights'}
-      <InsightsView />
     {:else if activeView === 'sessions'}
       <SessionsView />
     {:else if activeView === 'stats-cache'}

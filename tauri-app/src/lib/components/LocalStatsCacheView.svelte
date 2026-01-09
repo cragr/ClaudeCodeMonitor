@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { Chart, registerables } from 'chart.js';
   import { ViewHeader, MetricCard } from '$lib/components';
@@ -15,6 +15,22 @@
   let hourlyChartCanvas: HTMLCanvasElement;
   let charts: Chart[] = [];
 
+  // macOS dark theme colors (matching Swift version)
+  const colors = {
+    green: '#00ff88',     // Bright green for positive
+    sky: '#00d9ff',       // Cyan (primary accent)
+    mauve: '#a855f7',     // Purple
+    peach: '#ffb347',     // Orange
+    pink: '#ff6b9d',
+    yellow: '#ffd93d',
+    red: '#ff6b6b',       // Softer red
+    blue: '#007aff',      // macOS blue
+    teal: '#00d9ff',      // Teal/Cyan
+    surface0: '#2c2c2e',  // Card background
+    surface1: '#3a3a3c',  // Hover state
+    overlay0: '#8e8e93',  // Muted text
+  };
+
   Chart.register(...registerables);
 
   async function fetchData() {
@@ -24,6 +40,7 @@
       data = await invoke<LocalStatsCacheData>('get_local_stats_cache', {
         pricingProvider: $settings.pricingProvider,
       });
+      await tick();
       updateCharts();
     } catch (e) {
       error = e as string;
@@ -33,6 +50,7 @@
   }
 
   function formatTokens(n: number): string {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
@@ -56,6 +74,38 @@
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function formatModelName(model: string): string {
+    // Extract friendly model name from full identifier
+    // e.g., "claude-opus-4-5-20251101" -> "Opus 4.5"
+    // e.g., "claude-3-5-haiku-20241022" -> "Haiku 3.5"
+    // e.g., "claude-sonnet-4-5-20250929" -> "Sonnet 4.5"
+    const lower = model.toLowerCase();
+
+    if (lower.includes('opus')) {
+      const match = lower.match(/opus[- ]?(\d)[- ]?(\d)?/);
+      if (match) {
+        return match[2] ? `Opus ${match[1]}.${match[2]}` : `Opus ${match[1]}`;
+      }
+      return 'Opus';
+    }
+    if (lower.includes('sonnet')) {
+      const match = lower.match(/sonnet[- ]?(\d)[- ]?(\d)?/);
+      if (match) {
+        return match[2] ? `Sonnet ${match[1]}.${match[2]}` : `Sonnet ${match[1]}`;
+      }
+      return 'Sonnet';
+    }
+    if (lower.includes('haiku')) {
+      const match = lower.match(/(\d)[- ](\d)[- ]haiku/) || lower.match(/haiku[- ]?(\d)[- ]?(\d)?/);
+      if (match) {
+        return match[2] ? `Haiku ${match[1]}.${match[2]}` : `Haiku ${match[1]}`;
+      }
+      return 'Haiku';
+    }
+    // Fallback: return the original model name
+    return model;
+  }
+
   function updateCharts() {
     if (!data) return;
     charts.forEach(c => c.destroy());
@@ -68,10 +118,10 @@
         const chart = new Chart(dailyChartCanvas, {
           type: 'bar',
           data: {
-            labels: data.dailyActivity.slice(-30).map(d => d.date.slice(5)), // MM-DD format
+            labels: data.dailyActivity.slice(-30).map(d => d.date.slice(5)),
             datasets: [{
               data: data.dailyActivity.slice(-30).map(d => d.value),
-              backgroundColor: '#5b9a8b',
+              backgroundColor: colors.sky,
               borderRadius: 2,
             }],
           },
@@ -80,8 +130,14 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#9aa0a9', maxTicksLimit: 10 } },
-              y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' } },
+              x: { grid: { display: false }, ticks: { color: colors.overlay0, maxTicksLimit: 10 } },
+              y: {
+                grid: {
+                  color: 'rgba(142, 142, 147, 0.3)',
+                  drawTicks: true,
+                },
+                ticks: { color: colors.overlay0 },
+              },
             },
           },
         });
@@ -91,14 +147,14 @@
 
     // Model breakdown doughnut
     if (modelChartCanvas && data.tokensByModel.length > 0) {
-      const colors = ['#9b7bb8', '#5b9a8b', '#6b9b7a', '#c4896b', '#b87b9b', '#6b8fc4'];
+      const chartColors = [colors.mauve, colors.sky, colors.green, colors.peach, colors.pink, colors.blue];
       const chart = new Chart(modelChartCanvas, {
         type: 'doughnut',
         data: {
           labels: data.tokensByModel.map(m => m.model),
           datasets: [{
             data: data.tokensByModel.map(m => m.tokens),
-            backgroundColor: colors.slice(0, data.tokensByModel.length),
+            backgroundColor: chartColors.slice(0, data.tokensByModel.length),
             borderWidth: 0,
           }],
         },
@@ -120,7 +176,7 @@
           labels: data.activityByHour.map(h => `${h.hour}:00`),
           datasets: [{
             data: data.activityByHour.map(h => h.count),
-            backgroundColor: '#9b7bb8',
+            backgroundColor: colors.mauve,
             borderRadius: 2,
           }],
         },
@@ -129,8 +185,14 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#9aa0a9', maxTicksLimit: 12 } },
-            y: { grid: { color: '#2f343c' }, ticks: { color: '#9aa0a9' } },
+            x: { grid: { display: false }, ticks: { color: colors.overlay0, maxTicksLimit: 12 } },
+            y: {
+              grid: {
+                color: 'rgba(142, 142, 147, 0.3)',
+                drawTicks: true,
+              },
+              ticks: { color: colors.overlay0 },
+            },
           },
         },
       });
@@ -138,89 +200,72 @@
     }
   }
 
+  const chartColors = [colors.mauve, colors.sky, colors.green, colors.peach, colors.pink, colors.blue];
+
   onMount(fetchData);
   onDestroy(() => charts.forEach(c => c.destroy()));
 </script>
 
 <div>
-  <ViewHeader category="stats-cache" title="Local Stats Cache" subtitle="From ~/.claude/stats-cache.json" />
+  <ViewHeader category="stats-cache" title="Lifetime Stats" subtitle="From ~/.claude/stats-cache.json" />
 
   {#if loading && !data}
-    <div class="flex items-center justify-center h-64">
-      <div class="text-text-secondary">Loading stats cache...</div>
+    <div class="flex items-center justify-center h-32">
+      <div class="text-xs text-text-muted">Loading stats cache...</div>
     </div>
   {:else if error}
-    <div class="bg-bg-card rounded-lg p-8 text-center">
-      <div class="text-text-secondary mb-2">Unable to load stats cache</div>
-      <div class="text-text-muted text-sm">{error}</div>
+    <div class="bg-bg-card rounded-md p-4 text-center">
+      <div class="text-xs text-text-secondary mb-1">Unable to load stats cache</div>
+      <div class="text-xs text-text-muted">{error}</div>
     </div>
   {:else if data}
-    <!-- Summary Cards -->
-    <div class="mb-6">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="h-px flex-1 bg-border-secondary"></div>
-        <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Summary</span>
-        <div class="h-px flex-1 bg-border-secondary"></div>
+    <!-- Summary Cards - 8 cards in 2 rows of 4 -->
+    <div class="grid grid-cols-4 gap-2 mb-3">
+      <MetricCard label="Total Tokens" value={formatTokens(data.totalTokens)} subtitle="all time" color="cyan" highlight={true} />
+      <MetricCard label="Sessions" value={data.totalSessions.toString()} subtitle="all time" color="green" />
+      <MetricCard label="Active Days" value={data.activeDays.toString()} subtitle="days used" color="yellow" />
+      <MetricCard label="Avg/Day" value={data.avgMessagesPerDay.toFixed(1)} subtitle="messages" color="orange" />
+    </div>
+    <div class="grid grid-cols-4 gap-2 mb-3">
+      <MetricCard label="Messages" value={data.totalMessages.toLocaleString()} subtitle="all time" color="purple" />
+      <MetricCard label="Est. Cost" value={formatCost(data.estimatedCost)} subtitle="all time" color="green" highlight={true} />
+      <MetricCard label="Peak Hour" value={formatHour(data.peakHour)} subtitle="most active" color="cyan" />
+      <MetricCard label="First Session" value={formatDate(data.firstSession)} subtitle="started using" color="blue" />
+    </div>
+
+    <!-- Daily Activity Chart -->
+    <div class="bg-bg-card rounded-md p-3 mb-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-medium text-text-muted uppercase tracking-wider">Daily Activity</div>
+        <span class="text-xs text-text-muted">Last 30 days</span>
       </div>
-      <div class="grid grid-cols-4 gap-4 mb-4">
-        <MetricCard label="Total Tokens" value={formatTokens(data.totalTokens)} subtitle="all time" color="cyan" />
-        <MetricCard label="Sessions" value={data.totalSessions.toString()} subtitle="all time" color="green" />
-        <MetricCard label="Active Days" value={data.activeDays.toString()} subtitle="days used" color="yellow" />
-        <MetricCard label="Avg/Day" value={data.avgMessagesPerDay.toFixed(1)} subtitle="messages" color="orange" />
-      </div>
-      <div class="grid grid-cols-4 gap-4">
-        <MetricCard label="Messages" value={data.totalMessages.toLocaleString()} subtitle="all time" color="purple" />
-        <MetricCard label="Est. Cost" value={formatCost(data.estimatedCost)} subtitle="all time" color="green" />
-        <MetricCard label="Peak Hour" value={formatHour(data.peakHour)} subtitle="most active" color="cyan" />
-        <MetricCard label="First Session" value={formatDate(data.firstSession)} subtitle="started using" color="blue" />
+      <div class="h-32"><canvas bind:this={dailyChartCanvas}></canvas></div>
+    </div>
+
+    <!-- Token Usage by Model -->
+    <div class="bg-bg-card rounded-md p-4 mb-3">
+      <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Token Usage by Model</div>
+      <div class="flex items-center gap-5">
+        <div class="w-30 h-30 flex-shrink-0" style="width: 120px; height: 120px;">
+          <canvas bind:this={modelChartCanvas}></canvas>
+        </div>
+        <div class="flex-1 space-y-2 min-w-0">
+          {#each data.tokensByModel.slice(0, 5) as model, i}
+            {@const percent = data.totalTokens > 0 ? (model.tokens / data.totalTokens) * 100 : 0}
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: {chartColors[i % chartColors.length]}"></div>
+              <span class="text-sm font-bold text-text-primary">{formatModelName(model.model)}</span>
+              <span class="text-sm font-bold text-text-primary">({percent.toFixed(1)}%)</span>
+            </div>
+          {/each}
+        </div>
       </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="space-y-6">
-      <!-- Daily Activity -->
-      <div class="bg-bg-card rounded-lg p-6">
-        <div class="flex items-center gap-4 mb-4">
-          <div class="h-px flex-1 bg-border-secondary"></div>
-          <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Daily Activity</span>
-          <div class="h-px flex-1 bg-border-secondary"></div>
-        </div>
-        <div class="text-xs text-text-muted mb-4">Last 30 days</div>
-        <div class="h-48"><canvas bind:this={dailyChartCanvas}></canvas></div>
-      </div>
-
-      <!-- Model & Hourly Charts -->
-      <div class="grid grid-cols-2 gap-6">
-        <!-- Token Usage by Model -->
-        <div class="bg-bg-card rounded-lg p-6">
-          <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Token Usage by Model</div>
-          <div class="text-xs text-text-muted mb-4">breakdown</div>
-          <div class="flex items-center gap-6">
-            <div class="w-36 h-36">
-              <canvas bind:this={modelChartCanvas}></canvas>
-            </div>
-            <div class="flex-1 space-y-2">
-              {#each data.tokensByModel as model, i}
-                {@const colors = ['#9b7bb8', '#5b9a8b', '#6b9b7a', '#c4896b', '#b87b9b', '#6b8fc4']}
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full" style="background-color: {colors[i % colors.length]}"></div>
-                    <span class="text-xs text-text-secondary truncate max-w-[120px]">{model.model}</span>
-                  </div>
-                  <span class="text-xs font-medium text-text-primary">{formatTokens(model.tokens)}</span>
-                </div>
-              {/each}
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity by Hour -->
-        <div class="bg-bg-card rounded-lg p-6">
-          <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">Activity by Hour</div>
-          <div class="text-xs text-text-muted mb-4">all time distribution</div>
-          <div class="h-36"><canvas bind:this={hourlyChartCanvas}></canvas></div>
-        </div>
-      </div>
+    <!-- Activity by Hour -->
+    <div class="bg-bg-card rounded-md p-3">
+      <div class="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Activity by Hour</div>
+      <div class="h-28"><canvas bind:this={hourlyChartCanvas}></canvas></div>
     </div>
   {/if}
 </div>

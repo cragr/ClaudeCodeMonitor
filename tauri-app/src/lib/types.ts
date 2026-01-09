@@ -9,6 +9,11 @@ export interface DashboardMetrics {
   pullRequestCount: number;
   tokensByModel: ModelTokens[];
   tokensOverTime: TimeSeriesPoint[];
+  // Token type breakdown
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
 }
 
 export interface ModelTokens {
@@ -27,15 +32,20 @@ export interface Settings {
   pricingProvider: 'anthropic' | 'aws-bedrock' | 'google-vertex';
 }
 
-export type TimeRange = '1h' | '8h' | '24h' | '2d' | '7d' | '30d';
+export type TimeRange = '15m' | '1h' | '4h' | '1d' | '7d' | 'custom';
+
+export interface CustomTimeRange {
+  start: number; // Unix timestamp in seconds
+  end: number;   // Unix timestamp in seconds
+}
 
 export const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
+  { value: '15m', label: 'Last 15 Minutes' },
   { value: '1h', label: 'Last Hour' },
-  { value: '8h', label: 'Last 8 Hours' },
-  { value: '24h', label: 'Last 24 Hours' },
-  { value: '2d', label: 'Last 2 Days' },
-  { value: '7d', label: 'Last 7 Days' },
-  { value: '30d', label: 'Last 30 Days' },
+  { value: '4h', label: 'Last 4 Hours' },
+  { value: '1d', label: 'Last Day' },
+  { value: '7d', label: 'Last Week' },
+  { value: 'custom', label: 'Custom Range' },
 ];
 
 // Insights types
@@ -83,6 +93,10 @@ export const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
 // Sessions types
 export interface SessionMetrics {
   sessionId: string;
+  project: string | null;
+  projectPath: string | null;
+  timestamp: number;
+  messageCount: number;
   totalCostUsd: number;
   totalTokens: number;
   inputTokens: number;
@@ -98,13 +112,21 @@ export interface ModelTokenCount {
   tokens: number;
 }
 
+export interface ProjectStats {
+  project: string;
+  projectPath: string | null;
+  sessionCount: number;
+  totalCostUsd: number;
+  totalTokens: number;
+  activeTimeSeconds: number;
+}
+
 export interface SessionsData {
   sessions: SessionMetrics[];
+  projects: ProjectStats[];
   totalCount: number;
 }
 
-export type SessionSortField = 'cost' | 'tokens' | 'duration' | 'sessionId';
-export type SortDirection = 'asc' | 'desc';
 
 // Local Stats Cache types
 export interface LocalStatsCacheData {

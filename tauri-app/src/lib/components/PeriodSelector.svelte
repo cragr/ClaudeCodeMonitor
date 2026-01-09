@@ -6,12 +6,12 @@
   export let onChange: (value: PeriodType) => void;
 </script>
 
-<div class="flex bg-surface-light rounded-lg p-1 gap-1">
+<div class="flex bg-bg-card rounded-md p-0.5 gap-0.5">
   {#each PERIOD_OPTIONS as option}
     <button
-      class="px-3 py-1.5 text-sm rounded-md transition-colors {value === option.value
-        ? 'bg-accent text-white'
-        : 'text-gray-400 hover:text-white hover:bg-surface'}"
+      class="px-2 py-1 text-xs rounded transition-colors {value === option.value
+        ? 'bg-blue/20 text-blue'
+        : 'text-text-muted hover:text-text-primary hover:bg-bg-card-hover'}"
       on:click={() => onChange(option.value)}
     >
       {option.label}

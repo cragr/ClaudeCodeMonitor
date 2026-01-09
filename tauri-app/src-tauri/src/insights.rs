@@ -14,6 +14,7 @@ pub struct StatsCache {
     pub daily_model_tokens: Option<Vec<DailyModelTokens>>,
     pub model_usage: HashMap<String, ModelUsage>,
     pub total_sessions: u32,
+    #[allow(dead_code)]
     pub total_messages: u32,
     pub longest_session: Option<LongestSession>,
     pub first_session_date: Option<String>,
@@ -26,6 +27,7 @@ pub struct DailyActivity {
     pub date: String,
     pub message_count: u32,
     pub session_count: u32,
+    #[allow(dead_code)]
     pub tool_call_count: u32,
 }
 
@@ -49,6 +51,7 @@ pub struct ModelUsage {
 #[serde(rename_all = "camelCase")]
 pub struct LongestSession {
     pub duration: u64,
+    #[allow(dead_code)]
     pub message_count: u32,
 }
 
@@ -190,13 +193,54 @@ fn sum_tokens_in_range(
 }
 
 fn calculate_cost(tokens: u64, pricing_provider: &str) -> f64 {
-    // Simplified cost calculation (using average of input/output rates)
-    // Opus 4.5: ~$15/1M tokens average
+    // Simplified cost calculation for period comparisons (using average of input/output rates)
+    // This is used for period-over-period comparisons where we don't have detailed token type breakdown
     let rate_per_million = match pricing_provider {
         "google-vertex" => 16.5, // 10% premium
         _ => 15.0,               // anthropic, aws-bedrock
     };
     (tokens as f64 / 1_000_000.0) * rate_per_million
+}
+
+fn calculate_detailed_cost(model_usage: &HashMap<String, ModelUsage>, pricing_provider: &str) -> f64 {
+    let mut total_cost = 0.0;
+    let model_lower = |m: &str| m.to_lowercase();
+
+    for (model, usage) in model_usage {
+        let model_lc = model_lower(model);
+        // Determine pricing based on model (per million tokens)
+        // Rates: (input, output, cache_read, cache_creation)
+        // Pricing: cache_read = 10% of input, cache_create = 125% of input
+        let (input_rate, output_rate, cache_read_rate, cache_create_rate) = if model_lc.contains("opus") {
+            // Claude Opus 4/4.5: $5/$25 per MTok
+            match pricing_provider {
+                "google-vertex" => (5.5, 27.5, 0.55, 6.875), // 10% premium
+                "aws-bedrock" => (5.0, 25.0, 0.50, 6.25),
+                _ => (5.0, 25.0, 0.50, 6.25), // anthropic
+            }
+        } else if model_lc.contains("haiku") {
+            // Claude Haiku 3.5: $1/$5 per MTok
+            match pricing_provider {
+                "google-vertex" => (1.1, 5.5, 0.11, 1.375), // 10% premium
+                "aws-bedrock" => (1.0, 5.0, 0.10, 1.25),
+                _ => (1.0, 5.0, 0.10, 1.25), // anthropic
+            }
+        } else {
+            // Default to Sonnet 4 pricing (also covers Sonnet 3.5): $3/$15 per MTok
+            match pricing_provider {
+                "google-vertex" => (3.3, 16.5, 0.33, 4.125), // 10% premium
+                "aws-bedrock" => (3.0, 15.0, 0.30, 3.75),
+                _ => (3.0, 15.0, 0.30, 3.75), // anthropic
+            }
+        };
+
+        total_cost += (usage.input_tokens as f64 / 1_000_000.0) * input_rate;
+        total_cost += (usage.output_tokens as f64 / 1_000_000.0) * output_rate;
+        total_cost += (usage.cache_read_input_tokens as f64 / 1_000_000.0) * cache_read_rate;
+        total_cost += (usage.cache_creation_input_tokens as f64 / 1_000_000.0) * cache_create_rate;
+    }
+
+    total_cost
 }
 
 fn find_peak_hour(hour_counts: &Option<HashMap<String, u32>>) -> Option<u32> {
@@ -359,11 +403,10 @@ pub struct HourActivity {
 pub async fn get_local_stats_cache(pricing_provider: String) -> Result<LocalStatsCacheData, String> {
     let cache = load_stats_cache()?;
 
-    // Calculate totals
-    let total_tokens: u64 = cache.daily_model_tokens
-        .as_ref()
-        .map(|days| days.iter().map(|d| d.tokens_by_model.values().sum::<u64>()).sum())
-        .unwrap_or(0);
+    // Calculate totals from modelUsage (more complete than dailyModelTokens)
+    let total_tokens: u64 = cache.model_usage.values()
+        .map(|u| u.input_tokens + u.output_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens)
+        .sum();
 
     let total_messages: u32 = cache.daily_activity.iter().map(|d| d.message_count).sum();
     let total_sessions = cache.total_sessions;
@@ -375,7 +418,8 @@ pub async fn get_local_stats_cache(pricing_provider: String) -> Result<LocalStat
         0.0
     };
 
-    let estimated_cost = calculate_cost(total_tokens, &pricing_provider);
+    // Use detailed cost calculation based on model and token type
+    let estimated_cost = calculate_detailed_cost(&cache.model_usage, &pricing_provider);
     let peak_hour = find_peak_hour(&cache.hour_counts);
 
     // Get all daily activity
@@ -387,23 +431,14 @@ pub async fn get_local_stats_cache(pricing_provider: String) -> Result<LocalStat
         })
         .collect();
 
-    // Get tokens by model
-    let tokens_by_model: Vec<ModelTokens> = cache.daily_model_tokens
-        .as_ref()
-        .map(|days| {
-            let mut model_totals: HashMap<String, u64> = HashMap::new();
-            for day in days {
-                for (model, tokens) in &day.tokens_by_model {
-                    *model_totals.entry(model.clone()).or_insert(0) += tokens;
-                }
-            }
-            let mut result: Vec<_> = model_totals.into_iter()
-                .map(|(model, tokens)| ModelTokens { model, tokens })
-                .collect();
-            result.sort_by(|a, b| b.tokens.cmp(&a.tokens));
-            result
+    // Get tokens by model from modelUsage (more complete data)
+    let mut tokens_by_model: Vec<ModelTokens> = cache.model_usage.iter()
+        .map(|(model, usage)| ModelTokens {
+            model: model.clone(),
+            tokens: usage.input_tokens + usage.output_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens,
         })
-        .unwrap_or_default();
+        .collect();
+    tokens_by_model.sort_by(|a, b| b.tokens.cmp(&a.tokens));
 
     // Get activity by hour
     let activity_by_hour: Vec<HourActivity> = cache.hour_counts

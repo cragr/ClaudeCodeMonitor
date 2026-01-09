@@ -62,34 +62,48 @@
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   }
 
+  // macOS dark theme colors
+  const colors = {
+    sky: '#00d9ff',
+    mauve: '#a855f7',
+    green: '#00ff88',
+    yellow: '#ffd93d',
+    peach: '#ffb347',
+  };
+
   onMount(fetchInsights);
 </script>
 
-<div>
-  <ViewHeader category="insights" title="Usage Insights" subtitle={getPeriodLabel(period)}>
-    <svelte:fragment slot="actions">
-      <PeriodSelector value={period} onChange={handlePeriodChange} />
-    </svelte:fragment>
-  </ViewHeader>
+<div class="flex flex-col h-full">
+  <!-- Header Row: Title + Time Range Picker -->
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-xs font-medium text-yellow uppercase tracking-wider">Insights</span>
+      </div>
+      <h1 class="text-lg font-semibold text-text-primary">Usage Trends</h1>
+      <p class="text-xs text-text-muted">{getPeriodLabel(period)}</p>
+    </div>
+    <PeriodSelector value={period} onChange={handlePeriodChange} />
+  </div>
 
   {#if loading && !data}
-    <div class="flex items-center justify-center h-64">
-      <div class="text-text-secondary">Loading insights...</div>
+    <div class="flex items-center justify-center h-32">
+      <div class="text-xs text-text-muted">Loading insights...</div>
     </div>
   {:else if error}
-    <div class="bg-bg-card rounded-lg p-8 text-center">
-      <div class="text-text-secondary mb-2">No usage data yet</div>
-      <div class="text-text-muted text-sm">Use Claude Code to start tracking your activity</div>
+    <div class="bg-bg-card rounded-md p-4 text-center">
+      <div class="text-xs text-text-secondary mb-1">No usage data yet</div>
+      <div class="text-xs text-text-muted">Use Claude Code to start tracking</div>
     </div>
   {:else if data}
-    <!-- Period Comparison Section -->
-    <div class="mb-6">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="h-px flex-1 bg-border-secondary"></div>
+    <!-- PERIOD COMPARISON Section -->
+    <div class="mb-4">
+      <div class="flex items-center gap-3 mb-2">
         <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Period Comparison</span>
-        <div class="h-px flex-1 bg-border-secondary"></div>
+        <div class="flex-1 h-px bg-border-secondary"></div>
       </div>
-      <div class="grid grid-cols-4 gap-4">
+      <div class="grid grid-cols-4 gap-2">
         <ComparisonCard label="Messages" data={data.comparison.messages} />
         <ComparisonCard label="Sessions" data={data.comparison.sessions} />
         <ComparisonCard label="Tokens" data={data.comparison.tokens} format="compact" />
@@ -97,55 +111,41 @@
       </div>
     </div>
 
-    <!-- Trends Section -->
-    <div class="mb-6">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="h-px flex-1 bg-border-secondary"></div>
+    <!-- TRENDS Section -->
+    <div class="mb-4">
+      <div class="flex items-center gap-3 mb-2">
         <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Trends</span>
-        <div class="h-px flex-1 bg-border-secondary"></div>
+        <div class="flex-1 h-px bg-border-secondary"></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <SparklineChart title="Daily Activity" data={data.dailyActivity} color="#5b9a8b" />
-        <SparklineChart title="Sessions/Day" data={data.sessionsPerDay} color="#9b7bb8" />
+      <div class="grid grid-cols-2 gap-2">
+        <SparklineChart title="Daily Activity" data={data.dailyActivity} color={colors.sky} />
+        <SparklineChart title="Sessions/Day" data={data.sessionsPerDay} color={colors.mauve} />
       </div>
     </div>
 
-    <!-- Peak Activity Section -->
+    <!-- PEAK ACTIVITY Section -->
     <div>
-      <div class="flex items-center gap-4 mb-4">
-        <div class="h-px flex-1 bg-border-secondary"></div>
+      <div class="flex items-center gap-3 mb-2">
         <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Peak Activity</span>
-        <div class="h-px flex-1 bg-border-secondary"></div>
+        <div class="flex-1 h-px bg-border-secondary"></div>
       </div>
-      <div class="bg-bg-card rounded-lg p-4">
-        <div class="grid grid-cols-4 gap-4">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-1.5 h-1.5 rounded-full bg-accent-yellow"></div>
-              <span class="text-xs text-text-muted uppercase">Most Active Hour</span>
-            </div>
-            <div class="text-xl font-bold text-text-primary">{formatHour(data.peakActivity.mostActiveHour)}</div>
+      <div class="bg-bg-card rounded-md p-3">
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-text-muted">Most Active Hour</span>
+            <span class="text-sm font-medium text-text-primary">{formatHour(data.peakActivity.mostActiveHour)}</span>
           </div>
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-1.5 h-1.5 rounded-full bg-accent-orange"></div>
-              <span class="text-xs text-text-muted uppercase">Longest Session</span>
-            </div>
-            <div class="text-xl font-bold text-text-primary">{formatDuration(data.peakActivity.longestSessionMinutes)}</div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-text-muted">Longest Session</span>
+            <span class="text-sm font-medium text-text-primary">{formatDuration(data.peakActivity.longestSessionMinutes)}</span>
           </div>
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-1.5 h-1.5 rounded-full bg-accent-green"></div>
-              <span class="text-xs text-text-muted uppercase">Current Streak</span>
-            </div>
-            <div class="text-xl font-bold text-text-primary">{data.peakActivity.currentStreak} days</div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-text-muted">Current Streak</span>
+            <span class="text-sm font-medium text-text-primary">{data.peakActivity.currentStreak} days</span>
           </div>
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-1.5 h-1.5 rounded-full bg-accent-cyan"></div>
-              <span class="text-xs text-text-muted uppercase">Member Since</span>
-            </div>
-            <div class="text-xl font-bold text-text-primary">{formatDate(data.peakActivity.memberSince)}</div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-text-muted">Member Since</span>
+            <span class="text-sm font-medium text-text-primary">{formatDate(data.peakActivity.memberSince)}</span>
           </div>
         </div>
       </div>

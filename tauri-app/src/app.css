@@ -2,13 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design System: macOS Dark
+ * A neutral dark theme matching the Swift version
+ * Neutral grays with cyan accent
+ */
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  background-color: #1a1a2e;
-  color: #e2e8f0;
+  /* Typography */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Base colors - macOS dark */
+  --color-base: #1c1c1e;       /* Main background */
+  --color-mantle: #161618;     /* Darker background */
+  --color-crust: #0d0d0f;      /* Darkest background */
+
+  /* Surface colors */
+  --color-surface-0: #2c2c2e;  /* Card background */
+  --color-surface-1: #3a3a3c;  /* Hover state */
+  --color-surface-2: #48484a;  /* Active state */
+
+  /* Text colors */
+  --color-text: #ffffff;       /* Primary text */
+  --color-subtext-1: #e5e5e7;  /* Secondary text */
+  --color-subtext-0: #c7c7cc;  /* Tertiary text */
+  --color-overlay-0: #8e8e93;  /* Muted text */
+
+  /* Accent colors - macOS style */
+  --color-blue: #007aff;       /* macOS blue */
+  --color-green: #00d9ff;      /* Cyan (primary accent) */
+  --color-sky: #00d9ff;        /* Cyan */
+  --color-mauve: #a855f7;      /* Purple */
+  --color-peach: #ffb347;      /* Orange */
+  --color-yellow: #ffd93d;     /* Yellow */
+  --color-red: #ff6b6b;        /* Softer red */
+  --color-teal: #00d9ff;       /* Teal/Cyan */
+  --color-pink: #ff6b9d;       /* Pink */
+
+  /* Applied to root */
+  background-color: var(--color-base);
+  color: var(--color-text);
 }
 
+/* Global styles */
 body {
   margin: 0;
   min-height: 100vh;
+  background-color: var(--color-base);
+}
+
+/* Scrollbar styling for cross-platform consistency */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-mantle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-surface-2);
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--color-mauve);
+  color: var(--color-crust);
+}
+
+/* Focus ring styling */
+:focus-visible {
+  outline: 2px solid var(--color-mauve);
+  outline-offset: 2px;
+}
+
+/* Chart.js overrides for Dracula theme */
+@layer utilities {
+  .chart-tooltip {
+    background-color: var(--color-surface-0) !important;
+    border: 1px solid var(--color-surface-1) !important;
+    border-radius: 6px !important;
+    color: var(--color-text) !important;
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
 }

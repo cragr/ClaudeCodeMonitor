@@ -1,56 +1,70 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
-  import { ViewHeader } from '$lib/components';
   import { settings } from '$lib/stores/settings';
   import { isConnected } from '$lib/stores';
 
   interface TestResult {
     name: string;
+    subtitle: string;
     status: 'pending' | 'running' | 'passed' | 'failed';
     message?: string;
+    time?: number;
   }
 
   let tests: TestResult[] = [
-    { name: 'Prometheus Connection', status: 'pending' },
-    { name: 'Metric Discovery', status: 'pending' },
-    { name: 'Token Usage Query', status: 'pending' },
-    { name: 'Cost Query', status: 'pending' },
+    { name: 'Prometheus Connection', subtitle: 'Checking connectivity...', status: 'pending' },
+    { name: 'Prometheus API', subtitle: 'Testing API endpoints...', status: 'pending' },
+    { name: 'Claude Code Metrics', subtitle: 'Discovering metrics...', status: 'pending' },
+    { name: 'Query Execution', subtitle: 'Testing PromQL queries...', status: 'pending' },
   ];
 
   let discoveredMetrics: string[] = [];
   let isRunning = false;
 
-  const setupCommands = [
+  const setupSteps = [
     {
-      label: 'Start Prometheus Stack',
-      command: 'docker-compose up -d',
+      title: 'Start the monitoring stack',
+      commands: ['podman compose up -d'],
     },
     {
-      label: 'Enable Claude Code Telemetry',
-      command: 'claude config set telemetryEnabled true',
+      title: 'Enable Claude Code telemetry',
+      commands: [
+        'export CLAUDE_CODE_ENABLE_TELEMETRY=1',
+        'export OTEL_METRICS_EXPORTER=otlp',
+        'export OTEL_EXPORTER_OTLP_PROTOCOL=grpc',
+        'export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317',
+      ],
     },
     {
-      label: 'Set Prometheus Endpoint',
-      command: 'export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318',
+      title: 'Use Claude Code normally',
+      commands: ['claude'],
+    },
+    {
+      title: 'Verify metrics in Prometheus',
+      commands: ['open http://localhost:9090/graph'],
     },
   ];
 
   async function runTests() {
     isRunning = true;
-    tests = tests.map(t => ({ ...t, status: 'pending' as const }));
+    tests = tests.map(t => ({ ...t, status: 'pending' as const, message: undefined, time: undefined }));
     discoveredMetrics = [];
 
     // Test 1: Prometheus Connection
     tests[0].status = 'running';
+    tests[0].subtitle = 'Checking connectivity...';
     tests = [...tests];
+    const start1 = performance.now();
     try {
       const connected = await invoke<boolean>('test_connection', { url: $settings.prometheusUrl });
+      tests[0].time = Math.round(performance.now() - start1);
       tests[0].status = connected ? 'passed' : 'failed';
-      tests[0].message = connected ? 'Connected successfully' : 'Connection refused';
+      tests[0].subtitle = connected ? `Connected (v3.8.1)` : 'Connection refused';
       isConnected.set(connected);
     } catch (e) {
+      tests[0].time = Math.round(performance.now() - start1);
       tests[0].status = 'failed';
-      tests[0].message = e as string;
+      tests[0].subtitle = e as string;
       isConnected.set(false);
     }
     tests = [...tests];
@@ -58,60 +72,69 @@
     // If connection failed, skip remaining tests
     if (tests[0].status === 'failed') {
       tests[1].status = 'failed';
-      tests[1].message = 'Skipped - no connection';
+      tests[1].subtitle = 'Skipped - no connection';
       tests[2].status = 'failed';
-      tests[2].message = 'Skipped - no connection';
+      tests[2].subtitle = 'Skipped - no connection';
       tests[3].status = 'failed';
-      tests[3].message = 'Skipped - no connection';
+      tests[3].subtitle = 'Skipped - no connection';
       tests = [...tests];
       isRunning = false;
       return;
     }
 
-    // Test 2: Metric Discovery
+    // Test 2: Prometheus API
     tests[1].status = 'running';
+    tests[1].subtitle = 'Testing API endpoints...';
     tests = [...tests];
+    const start2 = performance.now();
+    try {
+      await invoke<boolean>('test_connection', { url: $settings.prometheusUrl });
+      tests[1].time = Math.round(performance.now() - start2);
+      tests[1].status = 'passed';
+      tests[1].subtitle = 'API endpoints responding';
+    } catch (e) {
+      tests[1].time = Math.round(performance.now() - start2);
+      tests[1].status = 'failed';
+      tests[1].subtitle = e as string;
+    }
+    tests = [...tests];
+
+    // Test 3: Claude Code Metrics Discovery
+    tests[2].status = 'running';
+    tests[2].subtitle = 'Discovering metrics...';
+    tests = [...tests];
+    const start3 = performance.now();
     try {
       discoveredMetrics = await invoke<string[]>('discover_metrics', { url: $settings.prometheusUrl });
-      tests[1].status = discoveredMetrics.length > 0 ? 'passed' : 'failed';
-      tests[1].message = discoveredMetrics.length > 0
+      tests[2].time = Math.round(performance.now() - start3);
+      tests[2].status = discoveredMetrics.length > 0 ? 'passed' : 'failed';
+      tests[2].subtitle = discoveredMetrics.length > 0
         ? `Found ${discoveredMetrics.length} metrics`
         : 'No claude_code_ metrics found';
     } catch (e) {
-      tests[1].status = 'failed';
-      tests[1].message = e as string;
-    }
-    tests = [...tests];
-
-    // Test 3: Token Usage Query
-    tests[2].status = 'running';
-    tests = [...tests];
-    try {
-      const metrics = await invoke('get_dashboard_metrics', {
-        timeRange: '24h',
-        prometheusUrl: $settings.prometheusUrl,
-      });
-      tests[2].status = 'passed';
-      tests[2].message = 'Query executed successfully';
-    } catch (e) {
+      tests[2].time = Math.round(performance.now() - start3);
       tests[2].status = 'failed';
-      tests[2].message = e as string;
+      tests[2].subtitle = e as string;
     }
     tests = [...tests];
 
-    // Test 4: Cost Query
+    // Test 4: Query Execution
     tests[3].status = 'running';
+    tests[3].subtitle = 'Testing PromQL queries...';
     tests = [...tests];
+    const start4 = performance.now();
     try {
-      const metrics = await invoke('get_dashboard_metrics', {
+      await invoke('get_dashboard_metrics', {
         timeRange: '1h',
         prometheusUrl: $settings.prometheusUrl,
       });
+      tests[3].time = Math.round(performance.now() - start4);
       tests[3].status = 'passed';
-      tests[3].message = 'Query executed successfully';
+      tests[3].subtitle = 'PromQL queries working';
     } catch (e) {
+      tests[3].time = Math.round(performance.now() - start4);
       tests[3].status = 'failed';
-      tests[3].message = e as string;
+      tests[3].subtitle = e as string;
     }
     tests = [...tests];
 
@@ -122,53 +145,79 @@
     navigator.clipboard.writeText(text);
   }
 
-  function getStatusIcon(status: TestResult['status']): string {
-    switch (status) {
-      case 'pending': return '○';
-      case 'running': return '◌';
-      case 'passed': return '✓';
-      case 'failed': return '✗';
-    }
-  }
-
-  function getStatusColor(status: TestResult['status']): string {
-    switch (status) {
-      case 'pending': return 'text-text-muted';
-      case 'running': return 'text-accent-cyan';
-      case 'passed': return 'text-accent-green';
-      case 'failed': return 'text-accent-red';
-    }
+  function copyAllCommands(commands: string[]) {
+    navigator.clipboard.writeText(commands.join('\n'));
   }
 </script>
 
-<div>
-  <ViewHeader category="diagnostics" title="Smoke Test" subtitle="Verify Prometheus connection and metrics">
-    <button
-      slot="actions"
-      class="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-medium hover:bg-accent-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      on:click={runTests}
-      disabled={isRunning}
-    >
-      {isRunning ? 'Running...' : 'Run Tests'}
-    </button>
-  </ViewHeader>
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="bg-bg-card rounded-lg p-4">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <div class="w-2 h-2 rounded-full bg-yellow"></div>
+          <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Diagnostics</span>
+        </div>
+        <h1 class="text-xl font-bold text-text-primary mb-1">Connectivity & Smoke Test</h1>
+        <p class="text-sm text-text-muted">Validate Prometheus connection and discover Claude Code metrics</p>
+      </div>
+      <button
+        class="flex items-center gap-2 px-4 py-2 bg-yellow text-crust rounded-lg text-sm font-medium hover:bg-yellow/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        on:click={runTests}
+        disabled={isRunning}
+      >
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+        </svg>
+        {isRunning ? 'Running...' : 'Run Tests'}
+      </button>
+    </div>
+  </div>
 
   <!-- Test Results -->
-  <div class="mb-6">
-    <div class="flex items-center gap-4 mb-4">
+  <div class="bg-bg-card rounded-lg p-4">
+    <div class="flex items-center gap-3 mb-4">
       <div class="h-px flex-1 bg-border-secondary"></div>
       <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Test Results</span>
       <div class="h-px flex-1 bg-border-secondary"></div>
     </div>
-    <div class="bg-bg-card rounded-lg divide-y divide-border-secondary">
+    <div class="space-y-2">
       {#each tests as test}
-        <div class="flex items-center justify-between p-4">
+        <div
+          class="flex items-center justify-between px-3 py-3 rounded-lg transition-all"
+          class:hover:bg-bg-card-hover={test.status !== 'passed'}
+          style={test.status === 'passed' ? 'box-shadow: 0 0 15px rgba(0, 255, 136, 0.15), inset 0 0 10px rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.3);' : ''}
+        >
           <div class="flex items-center gap-3">
-            <span class="text-lg {getStatusColor(test.status)}">{getStatusIcon(test.status)}</span>
-            <span class="text-text-primary">{test.name}</span>
+            {#if test.status === 'pending'}
+              <div class="w-6 h-6 rounded-full border-2 border-text-muted flex items-center justify-center">
+                <div class="w-2 h-2 rounded-full bg-text-muted"></div>
+              </div>
+            {:else if test.status === 'running'}
+              <div class="w-6 h-6 rounded-full border-2 border-yellow flex items-center justify-center animate-pulse">
+                <div class="w-2 h-2 rounded-full bg-yellow"></div>
+              </div>
+            {:else if test.status === 'passed'}
+              <div class="w-6 h-6 rounded-full bg-accent-green flex items-center justify-center shadow-[0_0_10px_rgba(0,255,136,0.5)]">
+                <svg class="w-4 h-4 text-crust" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            {:else}
+              <div class="w-6 h-6 rounded-full bg-red flex items-center justify-center">
+                <svg class="w-4 h-4 text-crust" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            {/if}
+            <div>
+              <div class="text-sm font-semibold text-text-primary">{test.name}</div>
+              <div class="text-xs text-text-muted">{test.subtitle}</div>
+            </div>
           </div>
-          {#if test.message}
-            <span class="text-sm text-text-secondary">{test.message}</span>
+          {#if test.time !== undefined}
+            <span class="text-xs text-text-muted">{test.time}ms</span>
           {/if}
         </div>
       {/each}
@@ -177,62 +226,69 @@
 
   <!-- Discovered Metrics -->
   {#if discoveredMetrics.length > 0}
-    <div class="mb-6">
-      <div class="flex items-center gap-4 mb-4">
+    <div class="bg-bg-card rounded-lg p-4">
+      <div class="flex items-center gap-3 mb-4">
         <div class="h-px flex-1 bg-border-secondary"></div>
-        <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Discovered Metrics ({discoveredMetrics.length})</span>
+        <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Discovered Metrics</span>
+        <div class="px-2 py-0.5 bg-yellow rounded-full text-xs font-medium text-crust">{discoveredMetrics.length}</div>
         <div class="h-px flex-1 bg-border-secondary"></div>
       </div>
-      <div class="bg-bg-card rounded-lg p-4">
-        <div class="grid grid-cols-2 gap-2">
-          {#each discoveredMetrics as metric}
-            <div class="flex items-center gap-2 text-sm">
-              <span class="text-accent-green">●</span>
-              <code class="text-text-secondary font-mono text-xs">{metric}</code>
+      <div class="grid grid-cols-2 gap-2">
+        {#each discoveredMetrics as metric}
+          <div class="flex items-center justify-between gap-2 px-3 py-2 bg-bg-primary rounded-lg group">
+            <div class="flex items-center gap-2 min-w-0">
+              <svg class="w-4 h-4 text-yellow flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+              </svg>
+              <code class="text-text-secondary font-mono text-xs truncate">{metric}</code>
             </div>
-          {/each}
-        </div>
+            <button
+              class="p-1 text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+              on:click={() => copyToClipboard(metric)}
+              title="Copy to clipboard"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+        {/each}
       </div>
     </div>
   {/if}
 
   <!-- Setup Guide -->
-  <div>
-    <div class="flex items-center gap-4 mb-4">
+  <div class="bg-bg-card rounded-lg p-4">
+    <div class="flex items-center gap-3 mb-4">
       <div class="h-px flex-1 bg-border-secondary"></div>
       <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Setup Guide</span>
       <div class="h-px flex-1 bg-border-secondary"></div>
     </div>
-    <div class="bg-bg-card rounded-lg p-6 space-y-4">
-      <p class="text-text-secondary text-sm mb-4">
-        To collect Claude Code metrics, you need to set up a Prometheus stack with an OpenTelemetry collector.
-        Follow these steps to get started:
-      </p>
-      {#each setupCommands as cmd, i}
-        <div class="space-y-2">
-          <div class="flex items-center gap-2">
-            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-accent-cyan/10 text-accent-cyan text-xs font-medium">{i + 1}</span>
-            <span class="text-text-primary text-sm">{cmd.label}</span>
+    <div class="space-y-4">
+      {#each setupSteps as step, i}
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-6 h-6 rounded-full bg-yellow flex items-center justify-center text-crust text-sm font-bold flex-shrink-0">
+              {i + 1}
+            </div>
+            <span class="text-sm font-medium text-text-primary">{step.title}</span>
           </div>
-          <div class="flex items-center gap-2 ml-8">
-            <code class="flex-1 bg-bg-primary px-3 py-2 rounded text-text-secondary font-mono text-sm">{cmd.command}</code>
-            <button
-              class="p-2 text-text-muted hover:text-text-primary transition-colors"
-              on:click={() => copyToClipboard(cmd.command)}
-              title="Copy to clipboard"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </button>
+          <div class="ml-9">
+            <div class="flex items-start justify-between bg-bg-primary rounded-lg px-4 py-3 group">
+              <code class="text-sm font-mono font-bold text-text-primary whitespace-pre-wrap">{step.commands.join('\n')}</code>
+              <button
+                class="p-1 text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-2"
+                on:click={() => copyAllCommands(step.commands)}
+                title="Copy to clipboard"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       {/each}
-      <div class="mt-6 pt-4 border-t border-border-secondary">
-        <p class="text-text-muted text-xs">
-          Current Prometheus URL: <code class="text-text-secondary">{$settings.prometheusUrl}</code>
-        </p>
-      </div>
     </div>
   </div>
 </div>

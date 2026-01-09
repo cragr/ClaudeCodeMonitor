@@ -13,6 +13,11 @@ pub struct DashboardMetrics {
     pub pull_request_count: u32,
     pub tokens_by_model: Vec<ModelTokens>,
     pub tokens_over_time: Vec<TimeSeriesPoint>,
+    // Token type breakdown
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub cache_read_tokens: u64,
+    pub cache_creation_tokens: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,22 +30,4 @@ pub struct ModelTokens {
 pub struct TimeSeriesPoint {
     pub timestamp: i64,
     pub value: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Settings {
-    pub prometheus_url: String,
-    pub refresh_interval: u32,
-    pub pricing_provider: String,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            prometheus_url: "http://localhost:9090".to_string(),
-            refresh_interval: 30,
-            pricing_provider: "anthropic".to_string(),
-        }
-    }
 }

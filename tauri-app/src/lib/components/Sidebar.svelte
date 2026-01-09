@@ -1,17 +1,53 @@
 <script lang="ts">
-  import { isConnected } from '$lib/stores';
+  import { onMount, onDestroy } from 'svelte';
+  import { isConnected, lastUpdated, totalCost } from '$lib/stores';
   import { settings } from '$lib/stores/settings';
 
   export let activeView: string;
   export let onNavigate: (view: string) => void;
-  export let totalCost: number = 0;
 
-  const dashboardItems = [
-    { id: 'summary', label: 'Summary', icon: 'grid', description: 'Overview of key metrics and cost' },
+  let elapsedSeconds = 0;
+  let interval: ReturnType<typeof setInterval>;
+
+  function updateElapsed() {
+    if ($lastUpdated) {
+      elapsedSeconds = Math.floor((Date.now() - $lastUpdated.getTime()) / 1000);
+    }
+  }
+
+  function formatElapsed(seconds: number): string {
+    if (seconds < 60) return `${seconds} sec ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+    return `${Math.floor(seconds / 3600)} hr ago`;
+  }
+
+  onMount(() => {
+    updateElapsed();
+    interval = setInterval(updateElapsed, 1000);
+  });
+
+  onDestroy(() => {
+    if (interval) clearInterval(interval);
+  });
+
+  // Each tab has a unique accent color for the selected state
+  const tabColors: Record<string, { border: string; glow: string; text: string }> = {
+    'summary': { border: '#00d9ff', glow: 'rgba(0, 217, 255, 0.15)', text: '#00d9ff' },      // Cyan - primary
+    'tokens': { border: '#00ff88', glow: 'rgba(0, 255, 136, 0.15)', text: '#00ff88' },       // Green - performance
+    'insights': { border: '#a855f7', glow: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' },    // Purple - analysis
+    'sessions': { border: '#ff6b9d', glow: 'rgba(255, 107, 157, 0.15)', text: '#ff6b9d' },    // Pink - activity
+    'stats-cache': { border: '#007aff', glow: 'rgba(0, 122, 255, 0.15)', text: '#007aff' },  // Blue - data
+    'smoke-test': { border: '#ffb347', glow: 'rgba(255, 179, 71, 0.15)', text: '#ffb347' }, // Orange - developer
+  };
+
+  const prometheusItems = [
+    { id: 'summary', label: 'Dashboard', icon: 'grid', description: 'Overview of key metrics and cost' },
     { id: 'tokens', label: 'Token Metrics', icon: 'activity', description: 'Token usage and model performance' },
-    { id: 'insights', label: 'Insights', icon: 'lightbulb', description: 'Usage trends and comparisons' },
-    { id: 'sessions', label: 'Sessions', icon: 'terminal', description: 'Session cost explorer and analysis' },
-    { id: 'stats-cache', label: 'Local Stats Cache', icon: 'database', description: 'Local Claude Code usage statistics' },
+  ];
+
+  const claudeCacheItems = [
+    { id: 'sessions', label: 'Session Stats', icon: 'terminal', description: 'Session cost explorer and analysis' },
+    { id: 'stats-cache', label: 'Lifetime Stats', icon: 'database', description: 'Local Claude Code usage statistics' },
   ];
 
   const developerItems = [
@@ -35,93 +71,162 @@
   }
 </script>
 
-<aside class="w-60 h-screen bg-bg-primary border-r border-border-secondary flex flex-col">
+<aside class="w-52 h-screen bg-bg-primary border-r border-border-secondary flex flex-col">
   <!-- Logo Header -->
-  <div class="p-4 flex items-center gap-3">
-    <div class="w-8 h-8 rounded bg-accent-cyan flex items-center justify-center">
-      <svg class="w-5 h-5 text-bg-primary" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/>
+  <div class="px-3 py-3 flex items-center gap-2">
+    <!-- Custom Logo: Gradient background with pulse/monitor line -->
+    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden"
+         style="background: linear-gradient(135deg, #00d9ff 0%, #007aff 50%, #a855f7 100%);">
+      <!-- Pulse/Activity line representing monitoring -->
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+        <!-- Activity pulse line -->
+        <path
+          d="M2 12h4l2-6 4 12 2-6h8"
+          stroke="white"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));"
+        />
       </svg>
     </div>
-    <div class="flex-1">
-      <div class="text-xs text-text-secondary uppercase tracking-wider">Claude Code</div>
+    <div class="flex-1 min-w-0">
+      <div class="text-xs text-text-muted uppercase tracking-wider leading-none">Claude Code</div>
       <div class="text-sm font-semibold text-text-primary">Monitor</div>
     </div>
-    <div class="px-2 py-0.5 bg-accent-green/20 text-accent-green text-xs font-medium rounded-full">
-      {formatCost(totalCost)}
+    <div class="px-3 py-1 text-sm font-bold rounded" style="background: rgba(0, 255, 136, 0.15); color: #00ff88;">
+      {formatCost($totalCost)}
     </div>
   </div>
 
   <!-- Navigation -->
-  <nav class="flex-1 overflow-y-auto px-2 py-2">
-    <!-- Dashboard Section -->
-    <div class="mb-4">
-      <div class="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wider">
-        Dashboard
+  <nav class="flex-1 overflow-y-auto px-2 py-1">
+    <!-- Prometheus Data Section -->
+    <div class="mb-3">
+      <div class="px-2 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider">
+        Prometheus Data
       </div>
-      {#each dashboardItems as item}
+      {#each prometheusItems as item}
+        {@const colors = tabColors[item.id]}
         <button
-          class="w-full text-left px-3 py-2 rounded-md mb-0.5 transition-colors flex items-center gap-3
+          class="w-full text-left px-2 py-1.5 rounded-md mb-0.5 transition-all duration-200
             {activeView === item.id
-              ? 'bg-bg-card text-text-primary'
+              ? 'text-text-primary'
               : 'text-text-secondary hover:text-text-primary hover:bg-bg-card-hover'}"
+          style={activeView === item.id
+            ? `background: ${colors.glow}; border-left: 2px solid ${colors.border}; box-shadow: inset 0 0 12px ${colors.glow};`
+            : 'border-left: 2px solid transparent;'}
           on:click={() => onNavigate(item.id)}
         >
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d={getIcon(item.icon)} />
-          </svg>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium">{item.label}</div>
-            {#if activeView === item.id}
-              <div class="text-xs text-text-muted truncate">{item.description}</div>
-            {/if}
+          <div class="flex items-center gap-2">
+            <svg
+              class="w-4 h-4 flex-shrink-0 transition-colors duration-200"
+              style={activeView === item.id ? `color: ${colors.text};` : ''}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d={getIcon(item.icon)} />
+            </svg>
+            <span class="text-sm font-medium truncate">{item.label}</span>
           </div>
+          {#if activeView === item.id}
+            <div class="text-xs text-text-muted mt-0.5 ml-6 truncate">{item.description}</div>
+          {/if}
+        </button>
+      {/each}
+    </div>
+
+    <!-- Claude Cache (Local) Section -->
+    <div class="mb-3">
+      <div class="px-2 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider">
+        Claude Cache (Local)
+      </div>
+      {#each claudeCacheItems as item}
+        {@const colors = tabColors[item.id]}
+        <button
+          class="w-full text-left px-2 py-1.5 rounded-md mb-0.5 transition-all duration-200
+            {activeView === item.id
+              ? 'text-text-primary'
+              : 'text-text-secondary hover:text-text-primary hover:bg-bg-card-hover'}"
+          style={activeView === item.id
+            ? `background: ${colors.glow}; border-left: 2px solid ${colors.border}; box-shadow: inset 0 0 12px ${colors.glow};`
+            : 'border-left: 2px solid transparent;'}
+          on:click={() => onNavigate(item.id)}
+        >
+          <div class="flex items-center gap-2">
+            <svg
+              class="w-4 h-4 flex-shrink-0 transition-colors duration-200"
+              style={activeView === item.id ? `color: ${colors.text};` : ''}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d={getIcon(item.icon)} />
+            </svg>
+            <span class="text-sm font-medium truncate">{item.label}</span>
+          </div>
+          {#if activeView === item.id}
+            <div class="text-xs text-text-muted mt-0.5 ml-6 truncate">{item.description}</div>
+          {/if}
         </button>
       {/each}
     </div>
 
     <!-- Developer Section -->
     <div>
-      <div class="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wider">
+      <div class="px-2 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider">
         Developer
       </div>
       {#each developerItems as item}
+        {@const colors = tabColors[item.id]}
         <button
-          class="w-full text-left px-3 py-2 rounded-md mb-0.5 transition-colors flex items-center gap-3
+          class="w-full text-left px-2 py-1.5 rounded-md mb-0.5 transition-all duration-200
             {activeView === item.id
-              ? 'bg-bg-card text-text-primary'
+              ? 'text-text-primary'
               : 'text-text-secondary hover:text-text-primary hover:bg-bg-card-hover'}"
+          style={activeView === item.id
+            ? `background: ${colors.glow}; border-left: 2px solid ${colors.border}; box-shadow: inset 0 0 12px ${colors.glow};`
+            : 'border-left: 2px solid transparent;'}
           on:click={() => onNavigate(item.id)}
         >
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d={getIcon(item.icon)} />
-          </svg>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium">{item.label}</div>
-            {#if activeView === item.id}
-              <div class="text-xs text-text-muted truncate">{item.description}</div>
-            {/if}
+          <div class="flex items-center gap-2">
+            <svg
+              class="w-4 h-4 flex-shrink-0 transition-colors duration-200"
+              style={activeView === item.id ? `color: ${colors.text};` : ''}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d={getIcon(item.icon)} />
+            </svg>
+            <span class="text-sm font-medium truncate">{item.label}</span>
           </div>
+          {#if activeView === item.id}
+            <div class="text-xs text-text-muted mt-0.5 ml-6 truncate">{item.description}</div>
+          {/if}
         </button>
       {/each}
     </div>
   </nav>
 
   <!-- Status Footer -->
-  <div class="p-4 border-t border-border-secondary">
-    <div class="flex items-center gap-2 mb-1">
+  <div class="px-3 py-2 border-t border-border-secondary">
+    <div class="flex items-center gap-1.5 mb-0.5">
       <div class="w-2 h-2 rounded-full {$isConnected ? 'bg-accent-green' : 'bg-accent-red'}"></div>
-      <span class="text-xs font-medium {$isConnected ? 'text-accent-green' : 'text-accent-red'}">
+      <span class="text-sm font-bold {$isConnected ? 'text-accent-green' : 'text-accent-red'}">
         {$isConnected ? 'CONNECTED' : 'DISCONNECTED'}
       </span>
-      <span class="text-xs text-text-muted">(V3.8.1)</span>
     </div>
     <div class="flex items-center gap-1 text-xs text-text-muted">
       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke-width="2"/>
         <path stroke-width="2" d="M12 6v6l4 2"/>
       </svg>
-      <span>Updated 0 sec ago</span>
+      <span>{$lastUpdated ? formatElapsed(elapsedSeconds) : 'never'}</span>
     </div>
   </div>
 </aside>

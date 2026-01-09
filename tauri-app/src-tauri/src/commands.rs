@@ -4,25 +4,23 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 fn time_range_to_seconds(range: &str) -> i64 {
     match range {
+        "15m" => 15 * 60,
         "1h" => 3600,
-        "8h" => 8 * 3600,
-        "24h" => 24 * 3600,
-        "2d" => 2 * 24 * 3600,
+        "4h" => 4 * 3600,
+        "1d" => 24 * 3600,
         "7d" => 7 * 24 * 3600,
-        "30d" => 30 * 24 * 3600,
-        _ => 24 * 3600,
+        _ => 15 * 60,
     }
 }
 
 fn time_range_to_promql(range: &str) -> &str {
     match range {
+        "15m" => "15m",
         "1h" => "1h",
-        "8h" => "8h",
-        "24h" => "24h",
-        "2d" => "2d",
+        "4h" => "4h",
+        "1d" => "1d",
         "7d" => "7d",
-        "30d" => "30d",
-        _ => "24h",
+        _ => "15m",
     }
 }
 
@@ -30,9 +28,30 @@ fn time_range_to_promql(range: &str) -> &str {
 pub async fn get_dashboard_metrics(
     time_range: String,
     prometheus_url: String,
+    custom_start: Option<i64>,
+    custom_end: Option<i64>,
 ) -> Result<DashboardMetrics, String> {
     let client = PrometheusClient::new(&prometheus_url);
-    let range = time_range_to_promql(&time_range);
+
+    // Determine if we're using custom range or preset
+    let (start_time, end_time, range_str) = if time_range == "custom" {
+        let start = custom_start.ok_or("Custom start time required")?;
+        let end = custom_end.ok_or("Custom end time required")?;
+        let duration_secs = end - start;
+        // Create a range string for Prometheus (e.g., "86400s" for 1 day)
+        let range = format!("{}s", duration_secs);
+        (start, end, range)
+    } else {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let duration = time_range_to_seconds(&time_range);
+        let start = now - duration;
+        (start, now, time_range_to_promql(&time_range).to_string())
+    };
+
+    let range = &range_str;
 
     // Query for total tokens
     let tokens_query = format!(
@@ -41,6 +60,62 @@ pub async fn get_dashboard_metrics(
     );
     let total_tokens = client
         .query(&tokens_query)
+        .await
+        .map_err(|e| e.to_string())?
+        .first()
+        .and_then(|r| r.value.as_ref())
+        .and_then(|(_, v)| v.parse::<f64>().ok())
+        .unwrap_or(0.0) as u64;
+
+    // Query for input tokens
+    let input_query = format!(
+        "sum(increase(claude_code_token_usage_tokens_total{{type=\"input\"}}[{}]))",
+        range
+    );
+    let input_tokens = client
+        .query(&input_query)
+        .await
+        .map_err(|e| e.to_string())?
+        .first()
+        .and_then(|r| r.value.as_ref())
+        .and_then(|(_, v)| v.parse::<f64>().ok())
+        .unwrap_or(0.0) as u64;
+
+    // Query for output tokens
+    let output_query = format!(
+        "sum(increase(claude_code_token_usage_tokens_total{{type=\"output\"}}[{}]))",
+        range
+    );
+    let output_tokens = client
+        .query(&output_query)
+        .await
+        .map_err(|e| e.to_string())?
+        .first()
+        .and_then(|r| r.value.as_ref())
+        .and_then(|(_, v)| v.parse::<f64>().ok())
+        .unwrap_or(0.0) as u64;
+
+    // Query for cache read tokens (try both naming conventions)
+    let cache_read_query = format!(
+        "sum(increase(claude_code_token_usage_tokens_total{{type=~\"cache_read|cacheRead\"}}[{}]))",
+        range
+    );
+    let cache_read_tokens = client
+        .query(&cache_read_query)
+        .await
+        .map_err(|e| e.to_string())?
+        .first()
+        .and_then(|r| r.value.as_ref())
+        .and_then(|(_, v)| v.parse::<f64>().ok())
+        .unwrap_or(0.0) as u64;
+
+    // Query for cache creation tokens (try both naming conventions)
+    let cache_creation_query = format!(
+        "sum(increase(claude_code_token_usage_tokens_total{{type=~\"cache_creation|cacheCreation\"}}[{}]))",
+        range
+    );
+    let cache_creation_tokens = client
+        .query(&cache_creation_query)
         .await
         .map_err(|e| e.to_string())?
         .first()
@@ -163,23 +238,43 @@ pub async fn get_dashboard_metrics(
         })
         .collect();
 
-    // Query for tokens over time
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
-    let start = now - time_range_to_seconds(&time_range);
-    let step = if time_range_to_seconds(&time_range) > 86400 {
-        "1h"
-    } else {
-        "5m"
+    // Query for tokens over time with resolution based on time range
+    // 15m, 1h -> 1 minute intervals
+    // 4h -> 5 minute intervals
+    // 1d -> 1 hour intervals
+    // 7d -> 1 day intervals
+    let step = match time_range.as_str() {
+        "15m" => "1m",
+        "1h" => "1m",
+        "4h" => "5m",
+        "1d" => "1h",
+        "7d" => "1d",
+        "custom" => {
+            // For custom ranges, choose step based on duration
+            let duration = end_time - start_time;
+            if duration <= 3600 {
+                "1m"
+            } else if duration <= 4 * 3600 {
+                "5m"
+            } else if duration <= 24 * 3600 {
+                "1h"
+            } else {
+                "1d"
+            }
+        }
+        _ => "1m",
     };
 
-    let range_query = "sum(rate(claude_code_token_usage_tokens_total[5m])) * 300";
-    let tokens_over_time: Vec<TimeSeriesPoint> = client
-        .query_range(range_query, start, now, step)
+    // Query rate per step interval using rate() with fixed 5m window (matching Swift app)
+    // This gives us per-second rate, frontend does cumulative sum and scales to match total
+    let range_query = "sum(rate(claude_code_cost_usage_USD_total[5m]))".to_string();
+
+    let query_result = client
+        .query_range(&range_query, start_time, end_time, step)
         .await
-        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+
+    let tokens_over_time: Vec<TimeSeriesPoint> = query_result
         .first()
         .and_then(|r| r.values.as_ref())
         .map(|values| {
@@ -204,6 +299,10 @@ pub async fn get_dashboard_metrics(
         pull_request_count,
         tokens_by_model,
         tokens_over_time,
+        input_tokens,
+        output_tokens,
+        cache_read_tokens,
+        cache_creation_tokens,
     })
 }
 

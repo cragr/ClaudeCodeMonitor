@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { Chart, registerables } from 'chart.js';
   import type { DailyActivityPoint } from '$lib/types';
 
   export let title: string;
   export let data: DailyActivityPoint[];
-  export let color: string = '#6366f1';
+  export let color: string = '#00d9ff'; // Cyan default
 
   let canvas: HTMLCanvasElement;
   let chart: Chart | null = null;
+  let mounted = false;
 
   Chart.register(...registerables);
 
@@ -16,13 +17,20 @@
     ? (data.reduce((sum, d) => sum + d.value, 0) / data.length).toFixed(1)
     : '0';
 
-  $: if (chart && data) {
-    chart.data.labels = data.map((d) => d.date.slice(5)); // MM-DD
-    chart.data.datasets[0].data = data.map((d) => d.value);
-    chart.update();
+  // React to data changes - create or update chart
+  $: if (mounted && canvas && data.length > 0) {
+    if (chart) {
+      chart.data.labels = data.map((d) => d.date.slice(5));
+      chart.data.datasets[0].data = data.map((d) => d.value);
+      chart.update();
+    } else {
+      createChart();
+    }
   }
 
-  onMount(() => {
+  function createChart() {
+    if (!canvas || data.length === 0) return;
+
     chart = new Chart(canvas, {
       type: 'line',
       data: {
@@ -52,6 +60,11 @@
         },
       },
     });
+  }
+
+  onMount(async () => {
+    await tick();
+    mounted = true;
   });
 
   onDestroy(() => {
@@ -59,14 +72,16 @@
   });
 </script>
 
-<div class="bg-surface-light rounded-lg p-4">
-  <div class="text-gray-400 text-xs uppercase tracking-wide">{title}</div>
-  <div class="text-gray-500 text-xs mb-2">Avg: {average}/day</div>
-  <div class="h-16">
+<div class="bg-bg-card rounded-md p-3">
+  <div class="flex items-center justify-between mb-1">
+    <div class="text-text-muted text-xs uppercase tracking-wider">{title}</div>
+    <div class="text-text-muted text-xs">Avg: {average}/day</div>
+  </div>
+  <div class="h-12">
     {#if data.length > 0}
       <canvas bind:this={canvas}></canvas>
     {:else}
-      <div class="h-full bg-surface rounded flex items-center justify-center text-gray-600 text-xs">
+      <div class="h-full bg-surface-0 rounded flex items-center justify-center text-text-muted text-xs">
         No data
       </div>
     {/if}

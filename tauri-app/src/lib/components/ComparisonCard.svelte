@@ -20,18 +20,18 @@
   $: isNegative = data.percentChange !== null && data.percentChange < 0;
 </script>
 
-<div class="bg-surface-light rounded-lg p-4 hover:bg-surface-lighter transition-colors">
-  <div class="text-gray-400 text-xs uppercase tracking-wide mb-2">{label}</div>
-  <div class="text-2xl font-bold text-white mb-2">{formatValue(data.current)}</div>
-  <div class="flex items-center gap-1 text-sm">
+<div class="bg-bg-card rounded-md p-3 hover:bg-bg-card-hover transition-colors">
+  <div class="text-text-muted text-xs uppercase tracking-wider mb-1">{label}</div>
+  <div class="text-lg font-bold text-text-primary mb-0.5">{formatValue(data.current)}</div>
+  <div class="flex items-center gap-1 text-xs">
     {#if data.percentChange !== null}
-      <span class={isPositive ? 'text-green-400' : isNegative ? 'text-red-400' : 'text-gray-400'}>
+      <span class={isPositive ? 'text-green' : isNegative ? 'text-red' : 'text-text-muted'}>
         {isPositive ? '↑' : isNegative ? '↓' : ''}
         {Math.abs(data.percentChange).toFixed(0)}%
       </span>
-      <span class="text-gray-500">vs prev</span>
+      <span class="text-text-muted">vs prev</span>
     {:else}
-      <span class="text-gray-500">—</span>
+      <span class="text-text-muted">—</span>
     {/if}
   </div>
 </div>
