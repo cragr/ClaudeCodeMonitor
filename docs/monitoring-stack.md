@@ -114,8 +114,8 @@ Both should output `always`.
 
 | Platform | Podman Machine Autostart | Container Restart Policy |
 |----------|-------------------------|-------------------------|
-| macOS | `podman machine set --autostart` | `restart: always` in compose.yaml |
-| Windows | `podman machine set --autostart` | `restart: always` in compose.yaml |
+| macOS | Podman Desktop → Settings → Resources → "Start on login" | `restart: always` in compose.yaml |
+| Windows | Podman Desktop → Settings → Resources → "Start on login" | `restart: always` in compose.yaml |
 | Linux | `systemctl --user enable podman.socket` + lingering | `restart: always` in compose.yaml |
 
 See platform-specific installation guides for detailed setup.

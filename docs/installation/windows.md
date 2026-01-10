@@ -32,16 +32,21 @@ podman machine start
 
 ### 3. Configure Autostart (Recommended)
 
-To have the Podman machine start automatically when Windows starts:
+To have the Podman machine start automatically when Windows starts, use **Podman Desktop**:
+
+1. Open Podman Desktop
+2. Go to **Settings** → **Resources**
+3. Find your Podman machine and enable **"Start on login"**
+
+**Alternative (Task Scheduler):**
+
+Create a scheduled task to start the Podman machine at login:
 
 ```powershell
-podman machine set --autostart
-```
-
-**Verify autostart is enabled:**
-
-```powershell
-podman machine inspect | Select-String "autostart"
+$action = New-ScheduledTaskAction -Execute "podman" -Argument "machine start"
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -RunLevel Limited
+Register-ScheduledTask -TaskName "PodmanMachineStart" -Action $action -Trigger $trigger -Principal $principal
 ```
 
 This ensures the monitoring stack is available immediately after boot without manual intervention.

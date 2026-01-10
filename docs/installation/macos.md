@@ -38,16 +38,39 @@ Both commands should return version information.
 
 ### 3. Configure Autostart (Recommended)
 
-To have the Podman machine start automatically when you log in:
+To have the Podman machine start automatically when you log in, use **Podman Desktop**:
 
-```bash
-podman machine set --autostart
+1. Open Podman Desktop
+2. Go to **Settings** → **Resources**
+3. Find your Podman machine and enable **"Start on login"**
+
+**Alternative (launchd):**
+
+Create a launch agent at `~/Library/LaunchAgents/com.podman.machine.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.podman.machine</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/podman</string>
+        <string>machine</string>
+        <string>start</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
 ```
 
-**Verify autostart is enabled:**
+Then load it:
 
 ```bash
-podman machine inspect | grep -i autostart
+launchctl load ~/Library/LaunchAgents/com.podman.machine.plist
 ```
 
 This ensures the monitoring stack is available immediately after login without manual intervention.
