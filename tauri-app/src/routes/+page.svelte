@@ -11,6 +11,7 @@
     SettingsModal,
   } from '$lib/components';
   import { isConnected } from '$lib/stores';
+  import { loadSettings } from '$lib/stores/settings';
 
   let activeView = 'summary';
   let showSettings = false;
@@ -28,6 +29,7 @@
   }
 
   onMount(() => {
+    loadSettings();
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
   });

@@ -3,7 +3,7 @@
   import { getVersion } from '@tauri-apps/api/app';
   import { check } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
-  import { settings } from '$lib/stores/settings';
+  import { settings, saveSettings } from '$lib/stores/settings';
   import type { Settings } from '$lib/types';
   import { onMount } from 'svelte';
 
@@ -73,8 +73,8 @@
     await relaunch();
   }
 
-  function save() {
-    $settings = { ...localSettings };
+  async function save() {
+    await saveSettings({ ...localSettings });
     onClose();
   }
 
