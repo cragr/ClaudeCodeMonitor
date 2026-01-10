@@ -49,7 +49,7 @@
 
   const claudeCacheItems = [
     { id: 'sessions', label: 'Session Stats', icon: 'terminal', description: 'Session cost explorer and analysis' },
-    { id: 'stats-cache', label: 'Lifetime Stats', icon: 'database', description: 'Local Claude Code usage statistics' },
+    { id: 'stats-cache', label: 'Stats Cache', icon: 'database', description: 'Local Claude Code usage statistics' },
   ];
 
   const developerItems = [

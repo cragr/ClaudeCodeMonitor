@@ -207,18 +207,38 @@
 </script>
 
 <div>
-  <ViewHeader category="stats-cache" title="Lifetime Stats" subtitle="From ~/.claude/stats-cache.json" />
+  <ViewHeader category="stats-cache" title="Stats Cache" subtitle="From ~/.claude/stats-cache.json" />
 
   {#if loading && !data}
     <div class="flex items-center justify-center h-32">
       <div class="text-xs text-text-muted">Loading stats cache...</div>
     </div>
   {:else if error}
-    <div class="bg-bg-card rounded-md p-4 text-center">
-      <div class="text-xs text-text-secondary mb-1">Unable to load stats cache</div>
-      <div class="text-xs text-text-muted">{error}</div>
+    <div class="bg-bg-card rounded-md p-6">
+      <div class="text-base font-semibold text-text-primary mb-2">Stats Not Available Yet</div>
+      <p class="text-sm text-text-secondary mb-4">
+        Claude Code hasn't generated usage statistics yet. This file is created automatically by Claude Code in the background — there's no manual way to trigger it.
+      </p>
+      <ul class="text-sm text-text-secondary mb-4 list-disc list-inside space-y-1">
+        <li>Use Claude Code for a few sessions</li>
+        <li>Try running <code class="bg-bg-primary px-1 py-0.5 rounded text-text-muted">/stats</code> in Claude Code</li>
+        <li>Check back later</li>
+      </ul>
+      <div class="text-xs text-text-muted mb-4">Looking for: ~/.claude/stats-cache.json</div>
+      <button
+        class="px-4 py-2 bg-accent-blue text-white text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
+        on:click={fetchData}
+      >
+        Refresh
+      </button>
     </div>
   {:else if data}
+    <!-- Info Banner -->
+    <div class="bg-bg-card rounded-md px-3 py-2 mb-3 flex items-center gap-2">
+      <span class="text-sm">ℹ️</span>
+      <span class="text-xs text-text-muted">Data covers approximately the last 30 days. Source: Claude Code internal cache</span>
+    </div>
+
     <!-- Summary Cards - 8 cards in 2 rows of 4 -->
     <div class="grid grid-cols-4 gap-2 mb-3">
       <MetricCard label="Est. Cost" value={formatCost(data.estimatedCost)} subtitle="all time" color="green" highlight={true} />
