@@ -52,17 +52,12 @@ jobs:
         working-directory: tauri-app
         run: pnpm install
 
-      - name: Setup signing key
-        if: matrix.platform != 'macos-latest'
-        shell: bash
-        run: |
-          echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > /tmp/tauri-signing.key
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ matrix.platform == 'macos-latest' && secrets.TAURI_SIGNING_PRIVATE_KEY || '/tmp/tauri-signing.key' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
           # macOS signing and notarization
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
