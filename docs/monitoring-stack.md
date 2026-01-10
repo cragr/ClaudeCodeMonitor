@@ -97,6 +97,29 @@ podman compose logs -f prometheus
 podman compose logs -f otel-collector
 ```
 
+## Configure Container Autostart
+
+To ensure the monitoring stack starts automatically when the Podman machine starts (or after a reboot on Linux), the containers are configured with `restart: always` in `compose.yaml`.
+
+**Verify restart policy:**
+
+```bash
+podman inspect prometheus --format '{{.HostConfig.RestartPolicy.Name}}'
+podman inspect otel-collector --format '{{.HostConfig.RestartPolicy.Name}}'
+```
+
+Both should output `always`.
+
+**Complete autostart requirements:**
+
+| Platform | Podman Machine Autostart | Container Restart Policy |
+|----------|-------------------------|-------------------------|
+| macOS | `podman machine set --autostart` | `restart: always` in compose.yaml |
+| Windows | `podman machine set --autostart` | `restart: always` in compose.yaml |
+| Linux | `systemctl --user enable podman.socket` + lingering | `restart: always` in compose.yaml |
+
+See platform-specific installation guides for detailed setup.
+
 ## Manage the Stack
 
 ### Stop the stack

@@ -20,7 +20,7 @@ Visit [podman-desktop.io](https://podman-desktop.io/) and download the macOS ins
 
 ### 2. Initialize Podman Machine
 
-After installing Podman Desktop, initialize the Podman machine:
+After installing Podman Desktop, initialize and start the Podman machine:
 
 ```bash
 podman machine init
@@ -35,6 +35,22 @@ podman compose version
 ```
 
 Both commands should return version information.
+
+### 3. Configure Autostart (Recommended)
+
+To have the Podman machine start automatically when you log in:
+
+```bash
+podman machine set --autostart
+```
+
+**Verify autostart is enabled:**
+
+```bash
+podman machine inspect | grep -i autostart
+```
+
+This ensures the monitoring stack is available immediately after login without manual intervention.
 
 ## Install the App
 

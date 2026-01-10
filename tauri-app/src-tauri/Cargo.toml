@@ -1,6 +1,6 @@
 [package]
 name = "claude-code-monitor"
-version = "0.5.14"
+version = "0.6.0"
 description = "Monitor Claude Code usage via Prometheus telemetry"
 authors = ["cragr"]
 edition = "2021"

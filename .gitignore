@@ -1,42 +1,24 @@
-# Swift Package Manager
-.build/
-.build-*/
-.swiftpm/
-Package.resolved
-
-#Sparkle Directory
-sparkle/
-
 # Claude Code local settings
 .claude/
 
-# Xcode
-*.xcodeproj/
-*.xcworkspace/
-xcuserdata/
-DerivedData/
-*.moved-aside
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
+# Rust/Cargo
+target/
+Cargo.lock
+!tauri-app/src-tauri/Cargo.lock
+
+# Node.js
+node_modules/
+.pnpm-store/
+
+# Tauri
+tauri-app/.svelte-kit/
+tauri-app/build/
 
 # Build artifacts
-build/
 *.o
 *.swp
 *~
-*.app/
 *.zip
-*.iconset/
 
 # macOS
 .DS_Store
@@ -50,11 +32,13 @@ build/
 *.sublime-workspace
 .vscode/
 
-# Archives
-*.xcarchive
-
 # Crash logs
 *.crash
 
 # Worktrees
 .worktrees/
+
+# Environment files
+.env
+.env.*
+!.env.example

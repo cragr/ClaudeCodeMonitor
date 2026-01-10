@@ -42,7 +42,24 @@ podman --version
 podman-compose version
 ```
 
-### 3. Install Podman Desktop (Optional)
+### 3. Enable Podman Socket for Autostart (Recommended)
+
+To ensure containers can restart automatically after reboot, enable the Podman socket:
+
+```bash
+systemctl --user enable podman.socket
+systemctl --user start podman.socket
+```
+
+**Enable lingering** so user services run even when not logged in:
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+This allows the monitoring stack to start automatically on boot.
+
+### 4. Install Podman Desktop (Optional)
 
 Podman Desktop provides a GUI for managing containers.
 

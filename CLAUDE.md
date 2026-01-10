@@ -10,6 +10,59 @@ Claude Code Monitor is a cross-platform desktop application for monitoring Claud
 
 **Supported Platforms:** macOS, Linux, Windows
 
+
+## Planning, TODOs, and Source of Truth (Required)
+
+Claude may generate design and implementation plans (including Obra / Superpowers outputs) to reason about work, sequencing, and risk. These plans are **temporary reasoning artifacts**, not the authoritative record of unfinished work.
+
+The **codebase itself is the source of truth**.
+
+### Mandatory Inline TODO Stubs
+
+Whenever code, configuration, tests, or documentation contain missing, incomplete, deferred, or intentionally out-of-scope work, Claude **must insert TODO stubs directly into the relevant files** at the exact location where the work belongs.
+
+Rules:
+- TODOs must be **explicit, scoped, and actionable** — never vague.
+- Each TODO must clearly state:
+  - WHAT is missing or unimplemented
+  - WHERE / WHEN it applies (function, module, path, lifecycle stage)
+  - EXPECTED behavior or acceptance criteria (brief but testable)
+  - Any known constraints or pending decisions (if applicable)
+- TODOs must be written **inline in the affected file**, not only in chat or plans.
+- Do not leave conceptual or implied gaps without a corresponding TODO.
+
+Examples:
+- ❌ `// TODO: fix later`
+- ❌ `// TODO: handle edge cases`
+- ✅ `// TODO(auth): Validate JWT issuer and audience before accepting token — reject with 401 and log reason`
+- ✅ `# TODO(helm): Document required S3 values — include example values.yaml snippet`
+
+### Plans → TODOs Collapse Rule
+
+Any item identified during planning that is not fully implemented **must be converted into one or more inline TODO stubs** in the appropriate files.
+
+A planned item is considered handled only if:
+- it is fully implemented, or
+- it exists as a TODO in the correct location(s)
+
+Do not rely on external plan documents to represent unfinished work.
+
+### Default Behavior
+
+Prefer:
+- small, focused changes
+- incremental implementation
+- inline TODO stubs
+
+Over:
+- large speculative plans
+- separate backlog documents
+- deferred work tracked only in chat or markdown plans
+
+If something is not implemented, there must be a TODO exactly where it belongs.
+If it is implemented, the TODO should be removed.
+
+
 ## Repository Structure
 
 ```

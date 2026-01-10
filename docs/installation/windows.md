@@ -30,6 +30,22 @@ podman machine init
 podman machine start
 ```
 
+### 3. Configure Autostart (Recommended)
+
+To have the Podman machine start automatically when Windows starts:
+
+```powershell
+podman machine set --autostart
+```
+
+**Verify autostart is enabled:**
+
+```powershell
+podman machine inspect | Select-String "autostart"
+```
+
+This ensures the monitoring stack is available immediately after boot without manual intervention.
+
 ## Install the App
 
 ### Option A: Download Release (Recommended)
