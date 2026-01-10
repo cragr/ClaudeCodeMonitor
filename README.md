@@ -21,15 +21,11 @@ A cross-platform desktop application for monitoring Claude Code usage via Promet
 
 ### 1. Install Prerequisites
 
-**Choose your platform:**
-
-- [macOS](docs/installation/macos.md) - Podman Desktop, Rust, Node.js, pnpm
-- [Linux](docs/installation/linux.md) - Podman, WebKit/GTK deps, Rust, Node.js, pnpm
-- [Windows](docs/installation/windows.md) - Podman Desktop, Visual Studio Build Tools, Rust, Node.js, pnpm
+Install [Podman Desktop](https://podman-desktop.io/) for your platform (macOS, Linux, or Windows).
 
 ### 2. Start the Monitoring Stack
 
-Install [Podman Desktop](https://podman-desktop.io/) and start the monitoring stack:
+Clone the repository and start the monitoring stack:
 
 ```bash
 # Clone the repository
@@ -45,8 +41,6 @@ podman compose up -d
 ```
 
 **Verify:** Open http://localhost:9090 to see Prometheus.
-
-See [Monitoring Stack Setup](docs/monitoring-stack.md) for detailed instructions.
 
 ### 3. Configure Environment Variables
 
@@ -87,8 +81,6 @@ Reload PowerShell and verify:
 . $PROFILE
 $env:CLAUDE_CODE_ENABLE_TELEMETRY  # Should output: 1
 ```
-
-See [Configuration](docs/configuration.md) for more details.
 
 ### 4. Install the App
 
@@ -146,9 +138,6 @@ With both settings enabled, the monitoring stack will be available automatically
 
 | Document | Description |
 |----------|-------------|
-| [Installation](docs/README.md) | Platform-specific installation guides |
-| [Monitoring Stack](docs/monitoring-stack.md) | Podman Desktop and Prometheus setup |
-| [Configuration](docs/configuration.md) | Environment variables and app settings |
 | [Architecture](docs/architecture.md) | Technical overview |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
 | [BUILD.md](BUILD.md) | Build from source |
