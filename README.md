@@ -4,232 +4,133 @@
   <img src="images/icon1.png" alt="Claude Code Monitor Icon" width="128">
 </p>
 
-A native macOS application for monitoring Claude Code usage via Prometheus telemetry data.
+A cross-platform desktop application for monitoring Claude Code usage via Prometheus telemetry. Runs on **macOS**, **Linux**, and **Windows**.
 
-![](https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/refs/heads/main/images/ccm_demo.gif)
+![Demo](https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/refs/heads/main/images/ccm_demo.gif)
 
 ## Features
 
-- **Summary Dashboard**: Real-time KPIs with cost rate and model breakdown charts
-- **Performance Dashboard**: Token metrics by model and type (input/output/cache)
-- **Historical Dashboard**: View metrics over custom time ranges with independent time selector
-- **KPI Cards**: Tokens, Cost, Active Time, Sessions, Lines Added/Removed, Commits, PRs
-- **Charts**: Token rate, cost rate, model breakdown (using Apple Charts)
-- **Menu Bar Mode**: Quick glance at current metrics without opening the full app
-- **Smoke Test**: Validate Prometheus connectivity and discover available metrics
-- **Settings**: Configurable Prometheus URL, refresh intervals, and filters
+- **Summary Dashboard** - Real-time KPIs with cost tracking and model breakdown
+- **Token Metrics** - Token usage by model and type (input/output/cache)
+- **Insights** - Usage trends, comparisons, and productivity metrics
+- **Sessions** - Cost by session and project analysis
+- **System Tray** - Quick stats at a glance
+- **Auto-Updates** - Stay current with automatic update checks
 
 ## Quickstart
 
-### 1. Clone the Repository
+### 1. Install Prerequisites
 
-```bash
-git clone https://github.com/cragr/ClaudeCodeMonitor.git
-cd ClaudeCodeMonitor
-```
+**Choose your platform:**
+
+- [macOS](docs/installation/macos.md) - Podman Desktop, Rust, Node.js, pnpm
+- [Linux](docs/installation/linux.md) - Podman, WebKit/GTK deps, Rust, Node.js, pnpm
+- [Windows](docs/installation/windows.md) - Podman Desktop, Visual Studio Build Tools, Rust, Node.js, pnpm
 
 ### 2. Start the Monitoring Stack
 
-Start the OpenTelemetry Collector and Prometheus using Podman (or Docker):
+Install [Podman Desktop](https://podman-desktop.io/) and start the monitoring stack:
 
 ```bash
+# Clone the repository
+git clone https://github.com/cragr/ClaudeCodeMonitor.git
+cd ClaudeCodeMonitor
+
+# Initialize Podman (macOS/Windows only)
+podman machine init
+podman machine start
+
+# Start the stack
 podman compose up -d
 ```
 
-Or with Docker:
+**Verify:** Open http://localhost:9090 to see Prometheus.
 
-```bash
-docker compose up -d
-```
-
-This starts:
-- **OpenTelemetry Collector** (ports 4317/gRPC, 4318/HTTP, 8889/metrics)
-- **Prometheus** (port 9090)
+See [Monitoring Stack Setup](docs/monitoring-stack.md) for detailed instructions.
 
 ### 3. Configure Environment Variables
 
-Add the following to your shell profile:
+Add to your shell profile (`~/.zshrc`, `~/.bashrc`, or PowerShell `$PROFILE`):
 
-**For Zsh (~/.zshrc):**
 ```bash
-echo '# Claude Code Telemetry
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
 export OTEL_METRICS_EXPORTER=otlp
 export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317' >> ~/.zshrc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
-**For Bash (~/.bashrc):**
-```bash
-echo '# Claude Code Telemetry
-export CLAUDE_CODE_ENABLE_TELEMETRY=1
-export OTEL_METRICS_EXPORTER=otlp
-export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317' >> ~/.bashrc
-```
-
-### 4. Reload Your Shell Profile
+Reload your shell and verify:
 
 ```bash
-# For Zsh
-source ~/.zshrc
-
-# For Bash
-source ~/.bashrc
+source ~/.zshrc  # or ~/.bashrc
+echo $CLAUDE_CODE_ENABLE_TELEMETRY  # Should output: 1
 ```
 
-### 5. Verify Environment Variables
+See [Configuration](docs/configuration.md) for all platforms including PowerShell.
 
-```bash
-echo $CLAUDE_CODE_ENABLE_TELEMETRY    # should output: 1
-echo $OTEL_METRICS_EXPORTER           # should output: otlp
-echo $OTEL_EXPORTER_OTLP_PROTOCOL     # should output: grpc
-echo $OTEL_EXPORTER_OTLP_ENDPOINT     # should output: http://localhost:4317
-```
+### 4. Install the App
 
-### 6. Start Using Claude Code
+**Download a release:**
 
-Run Claude Code to start generating metrics:
+Go to [Releases](https://github.com/cragr/ClaudeCodeMonitor/releases) and download:
 
-```bash
-claude
-```
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | `Claude.Code.Monitor_x.x.x_aarch64.dmg` |
+| macOS (Intel) | `Claude.Code.Monitor_x.x.x_x64.dmg` |
+| Windows | `Claude.Code.Monitor_x.x.x_x64-setup.exe` |
+| Linux (Debian/Ubuntu) | `claude-code-monitor_x.x.x_amd64.deb` |
+| Linux (Fedora/RHEL) | `claude-code-monitor-x.x.x-1.x86_64.rpm` |
+| Linux (Universal) | `Claude.Code.Monitor_x.x.x_amd64.AppImage` |
 
-Use Claude Code normally - metrics will be automatically sent to the monitoring stack.
+**Or build from source:** See [BUILD.md](BUILD.md).
 
-### 7. Install and Run the Monitor App
+### 5. Verify Setup
 
-1. Download the latest `ClaudeCodeMonitor.dmg` from the [Releases](https://github.com/cragr/ClaudeCodeMonitor/releases) page
+1. Run Claude Code to generate some metrics:
+   ```bash
+   claude
+   ```
 
-2. Open and drag `ClaudeCodeMonitor.app` to your Applications folder
+2. Open the app and go to **Smoke Test** in the sidebar
 
-3. Launch the app from Applications
+3. Click **Run Tests** - all tests should pass (green checkmarks)
 
-The app will connect to Prometheus and display your Claude Code usage metrics.
+**Troubleshooting:**
 
-### 8. Verify Setup
-
-1. Open the app
-2. Go to "Smoke Test" tab in the sidebar
-3. Click "Run Tests"
-4. All tests should pass (green checkmarks)
-
-If metrics aren't showing:
 - Ensure the monitoring stack is running: `podman compose ps`
 - Check Prometheus targets: http://localhost:9090/targets
-- Use Claude Code to generate some metrics
-- Wait a few minutes for metrics to be scraped
+- See [Troubleshooting](docs/troubleshooting.md) for common issues
 
-## Usage
+## Documentation
 
-### Summary Dashboard
-- Shows KPIs for the selected time range (15m, 1h, 12h, 1d, 1w, 2w, 1mo)
-- Auto-refreshes based on configured interval
-- Displays cost rate over time and cost breakdown by model
-- Shows tokens, cost, active time, sessions, lines of code, commits, PRs
-
-### Performance Dashboard
-- Token usage time series with breakdown by model and type
-- Token types: input, output, cacheRead, cacheCreation
-- Detailed token metrics with charts
-
-### Historical Dashboard
-- Independent time selector from global toolbar
-- Usage overview with stats equivalent to `claude /stats` command
-- Usage trends charts and productivity metrics
-
-### Menu Bar
-- Click the chart icon in the menu bar for quick stats
-- Shows tokens, cost, and active time at a glance
-- Click "Open Dashboard" for full app
-
-### Settings
-- **General**: Default time range, refresh interval, menu bar options
-- **Connection**: Prometheus URL, connection test
-- **Filters**: Filter by terminal type, model, or app version
+| Document | Description |
+|----------|-------------|
+| [Installation](docs/README.md) | Platform-specific installation guides |
+| [Monitoring Stack](docs/monitoring-stack.md) | Podman Desktop and Prometheus setup |
+| [Configuration](docs/configuration.md) | Environment variables and app settings |
+| [Architecture](docs/architecture.md) | Technical overview |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
+| [BUILD.md](BUILD.md) | Build from source |
 
 ## Supported Metrics
 
 | Metric | Description |
 |--------|-------------|
-| `claude_code.session.count` | Number of CLI sessions |
-| `claude_code.token.usage` | Total tokens used |
-| `claude_code.cost.usage` | Cost in USD |
-| `claude_code.active_time.total` | Active coding time (seconds) |
-| `claude_code.lines_of_code.count` | Lines added/removed |
-| `claude_code.commit.count` | Git commits created |
-| `claude_code.pull_request.count` | PRs created |
-| `claude_code.code_edit_tool.decision` | Code edit decisions |
+| `claude_code_token_usage_tokens_total` | Token consumption |
+| `claude_code_cost_usage_USD_total` | Cost in USD |
+| `claude_code_active_time_seconds_total` | Active coding time |
+| `claude_code_session_count_total` | Session count |
+| `claude_code_lines_of_code_count_total` | Lines added/removed |
+| `claude_code_commit_count_total` | Git commits |
+| `claude_code_pull_request_count_total` | Pull requests |
 
-### Available Labels
-- `session.id` - Session identifier
-- `user.account_uuid` - User account UUID
-- `organization.id` - Organization ID
-- `terminal.type` - Terminal type (iTerm, Terminal, etc.)
-- `app.version` - Claude Code version
-- `model` - Claude model used
+## Tech Stack
 
-## Cross-Platform App (Tauri)
-
-The `tauri-app/` directory contains a cross-platform version built with Tauri 2 + Svelte that runs on macOS and Windows.
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 18+
-- [pnpm](https://pnpm.io/)
-- [Rust](https://rustup.rs/)
-
-### Development
-
-```bash
-cd tauri-app
-pnpm install
-pnpm tauri dev
-```
-
-### Building
-
-```bash
-cd tauri-app
-pnpm tauri build
-```
-
-Build outputs:
-- macOS: `src-tauri/target/release/bundle/dmg/` (.dmg installer)
-- Windows: `src-tauri/target/release/bundle/msi/` (.msi installer)
-
-### Features
-
-- Dashboard with tokens, cost, active time, sessions, lines of code, commits
-- Tokens over time chart
-- Model breakdown chart
-- Settings modal with Prometheus connection test
-- System tray with quick access menu
-- Auto-updater support
-
-## Troubleshooting
-
-### "Not Connected" Error
-1. Check if Prometheus is running: `podman compose ps`
-2. Verify Prometheus URL in Settings (default: http://localhost:9090)
-3. Test connection in Settings → Connection → Test Connection
-
-### No Metrics Showing
-1. Ensure telemetry is enabled: `echo $CLAUDE_CODE_ENABLE_TELEMETRY`
-2. Check OTel settings:
-   ```bash
-   echo $OTEL_METRICS_EXPORTER          # should be: otlp
-   echo $OTEL_EXPORTER_OTLP_PROTOCOL    # should be: grpc
-   echo $OTEL_EXPORTER_OTLP_ENDPOINT    # should be: http://localhost:4317
-   ```
-3. Use Claude Code to generate some metrics
-4. Check Prometheus has the target: http://localhost:9090/targets
-5. Query Prometheus directly: http://localhost:9090/graph
-   - Try: `{__name__=~"claude.*"}`
-
-## Building & Distribution
-
-For information on building from source, running tests, and distributing the app, see [BUILD.md](BUILD.md).
+- **Framework:** [Tauri 2](https://tauri.app/) (Rust + Web)
+- **Frontend:** [Svelte 5](https://svelte.dev/) + TypeScript + [Tailwind CSS](https://tailwindcss.com/)
+- **Charts:** [Chart.js](https://www.chartjs.org/)
+- **Containers:** [Podman](https://podman.io/) + [Podman Desktop](https://podman-desktop.io/)
 
 ## License
 

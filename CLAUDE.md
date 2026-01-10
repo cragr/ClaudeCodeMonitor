@@ -4,68 +4,124 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Claude Code Monitor is a native macOS SwiftUI application for monitoring Claude Code usage via Prometheus telemetry data. It displays real-time and historical metrics including tokens, cost, active time, sessions, lines of code, commits, and pull requests.
+Claude Code Monitor is a cross-platform desktop application for monitoring Claude Code usage via Prometheus telemetry data. It displays real-time and historical metrics including tokens, cost, active time, sessions, lines of code, commits, and pull requests.
+
+**Tech Stack:** Tauri 2, Rust, Svelte 5, TypeScript, Tailwind CSS, Chart.js
+
+**Supported Platforms:** macOS, Linux, Windows
 
 ## Repository Structure
 
-- `macos-app/` - Native macOS SwiftUI application
-- `docker-compose.yml` - Docker Compose configuration for Prometheus and OTel collector
-- `prometheus.yml` - Prometheus scrape configuration
-- `otel-collector-config.yaml` - OpenTelemetry collector configuration
+```
+ClaudeCodeMonitor/
+├── tauri-app/                    # Main application
+│   ├── src/                      # Svelte frontend
+│   │   ├── lib/components/       # UI components
+│   │   ├── lib/stores/           # Svelte stores (state)
+│   │   ├── lib/types/            # TypeScript types
+│   │   └── routes/               # SvelteKit pages
+│   ├── src-tauri/                # Rust backend
+│   │   ├── src/main.rs           # App entry, tray, window
+│   │   ├── src/prometheus.rs     # HTTP client for Prometheus
+│   │   ├── src/metrics.rs        # Data models (serde structs)
+│   │   └── src/commands.rs       # Tauri IPC commands
+│   ├── package.json              # Node.js dependencies
+│   └── tailwind.config.js        # Tailwind configuration
+├── compose.yaml                  # Monitoring stack (Podman Compose)
+├── prometheus.yml                # Prometheus scrape configuration
+├── otel-collector-config.yaml    # OpenTelemetry collector config
+└── docs/                         # Documentation
+```
 
 ## Build Commands
 
 ```bash
-# Build the project
-cd macos-app && swift build
+# Install dependencies
+cd tauri-app && pnpm install
 
-# Run the application
-cd macos-app && swift run ClaudeCodeMonitor
+# Development with hot-reload
+cd tauri-app && pnpm tauri dev
 
-# Run tests
-cd macos-app && swift test
+# Production build
+cd tauri-app && pnpm tauri build
+
+# Type checking (Svelte + TypeScript)
+cd tauri-app && pnpm check
+
+# Rust checks
+cd tauri-app/src-tauri && cargo check
+cd tauri-app/src-tauri && cargo clippy
 ```
-
-In Xcode: Open `macos-app/Package.swift` directly, then ⌘R to run, ⌘U to test.
 
 ## Architecture
 
-**Swift Package structure with SwiftUI app:**
+### Rust Backend (`src-tauri/src/`)
 
-- `macos-app/ClaudeCodeMonitor/Sources/App/` - App entry point with `@main`, AppDelegate for lifecycle management
-- `macos-app/ClaudeCodeMonitor/Sources/Models/` - Data models for Prometheus API responses and app state
-  - `ClaudeCodeMetrics.swift` - Canonical metric names (`ClaudeCodeMetric` enum) with mapping from OTel/Prometheus variants
-  - `PrometheusModels.swift` - Decodable response types for Prometheus API
-  - `AppState.swift` - `@MainActor` observable state for UI binding
-- `macos-app/ClaudeCodeMonitor/Sources/Services/` - Business logic layer
-  - `PrometheusClient.swift` - Actor-based async HTTP client with caching, query methods (`query`, `queryRange`), and PromQL query builder
-  - `MetricsService.swift` - Aggregates raw Prometheus data into dashboard metrics
-  - `SettingsManager.swift` - UserDefaults-backed settings with `@Published` properties
-- `macos-app/ClaudeCodeMonitor/Sources/Views/` - SwiftUI views for dashboard, settings, menu bar
-- `macos-app/ClaudeCodeMonitorTests/` - Unit tests for query building and JSON decoding
+- **`main.rs`** - App entry point, window management, system tray setup
+- **`lib.rs`** - Library exports and Tauri command registration
+- **`prometheus.rs`** - Async HTTP client for Prometheus API queries
+- **`metrics.rs`** - Serde structs for metrics data (`DashboardMetrics`, `TimeSeriesPoint`, etc.)
+- **`commands.rs`** - Tauri IPC commands (`get_dashboard_metrics`, `test_connection`, etc.)
 
-**Key patterns:**
-- `PrometheusClient` is an `actor` for thread-safe network operations
-- `PromQLQueryBuilder` uses builder pattern for constructing Prometheus queries with fluent API (`.rate()`, `.sum()`, `.withLabel()`)
-- State management via `@StateObject`/`@EnvironmentObject` with `AppState` and `SettingsManager`
-- Menu bar extra using SwiftUI's `MenuBarExtra` scene
-- `ClaudeCodeMetric.normalize(_:)` handles various metric name formats (dot notation, underscore, with/without `_total` suffix)
+### Svelte Frontend (`src/`)
 
-## Requirements
+- **`lib/components/`** - Reusable UI components (`MetricCard`, `Sidebar`, `ViewHeader`, etc.)
+- **`lib/stores/`** - Svelte stores for state management (`metrics.ts`, `settings.ts`)
+- **`lib/types/`** - TypeScript type definitions
+- **`routes/+page.svelte`** - Main app layout with sidebar navigation
 
-- macOS 14.0+ (Sonoma)
-- Swift 5.9 / Xcode 15+
-- Docker for running Prometheus stack (see `docker-compose.yml`)
+### Key Patterns
+
+- **Tauri IPC** - Frontend calls `invoke('command_name', { params })` to execute Rust commands
+- **Svelte Stores** - Reactive state with `writable()` stores
+- **Async Rust** - `reqwest` for HTTP, `tokio` runtime
+- **Settings** - `tauri-plugin-store` for persistent JSON storage
+
+## Monitoring Stack
+
+Start with Podman Compose:
+
+```bash
+podman compose up -d
+```
+
+Services:
+- **OpenTelemetry Collector** - Ports 4317 (gRPC), 4318 (HTTP), 8889 (metrics)
+- **Prometheus** - Port 9090
 
 ## Prometheus Metric Names
 
-The app queries metrics prefixed with `claude_code_`. Actual metric names from OTel have `_total` suffix for counters (e.g., `claude_code_token_usage_tokens_total`). The `PromQLQueryBuilder` helper methods in `PrometheusClient.swift` construct the full metric names with proper suffixes.
+Metrics are prefixed with `claude_code_` and use `_total` suffix for counters:
 
-Common metrics:
-- `claude_code_token_usage_tokens_total` - Token consumption
-- `claude_code_cost_usage_USD_total` - Cost in USD
-- `claude_code_active_time_seconds_total` - Active coding time
-- `claude_code_session_count_total` - Session count
-- `claude_code_lines_of_code_count_total` - Lines added/removed (has `type` label)
-- `claude_code_commit_count_total` - Git commits
-- `claude_code_pull_request_count_total` - Pull requests created
+| Metric | Description |
+|--------|-------------|
+| `claude_code_token_usage_tokens_total` | Token consumption |
+| `claude_code_cost_usage_USD_total` | Cost in USD |
+| `claude_code_active_time_seconds_total` | Active coding time |
+| `claude_code_session_count_total` | Session count |
+| `claude_code_lines_of_code_count_total` | Lines added/removed (has `type` label) |
+| `claude_code_commit_count_total` | Git commits |
+| `claude_code_pull_request_count_total` | Pull requests created |
+
+### Labels
+
+- `session_id` - Session identifier
+- `model` - Claude model (e.g., `claude-sonnet-4-20250514`)
+- `terminal_type` - Terminal application
+- `app_version` - Claude Code version
+
+## Requirements
+
+- **Rust** (stable)
+- **Node.js 18+** with pnpm
+- **Platform-specific:**
+  - macOS: Xcode Command Line Tools
+  - Linux: `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`
+  - Windows: Visual Studio Build Tools (C++ workload)
+
+## Configuration Files
+
+- `tauri-app/tauri.conf.json` - Tauri configuration (window, tray, updater, bundle targets)
+- `tauri-app/package.json` - Node.js scripts and dependencies
+- `tauri-app/src-tauri/Cargo.toml` - Rust dependencies
+- `tauri-app/tailwind.config.js` - Tailwind CSS theme configuration

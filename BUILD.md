@@ -1,274 +1,341 @@
 # Building Claude Code Monitor
 
-This document covers building, testing, and distributing the Claude Code Monitor macOS application.
+This guide covers building the Claude Code Monitor app from source on all supported platforms.
 
-## Prerequisites
+## Prerequisites by Platform
 
-1. **macOS 14.0+** (Sonoma or later)
-2. **Swift 5.9+** (included with Xcode 15+ or install via swiftly/homebrew)
+### macOS
+
+1. **Xcode Command Line Tools**
+   ```bash
+   xcode-select --install
+   ```
+
+2. **Rust**
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   source $HOME/.cargo/env
+   ```
+
+3. **Node.js 18+**
+   ```bash
+   brew install node
+   ```
+
+4. **pnpm**
+   ```bash
+   npm install -g pnpm
+   ```
+
+### Linux (Debian/Ubuntu)
+
+1. **Build essentials and WebKit/GTK dependencies**
+   ```bash
+   sudo apt update
+   sudo apt install -y \
+     build-essential \
+     curl \
+     wget \
+     file \
+     libssl-dev \
+     libwebkit2gtk-4.1-dev \
+     libappindicator3-dev \
+     librsvg2-dev \
+     patchelf \
+     libayatana-appindicator3-dev
+   ```
+
+2. **Rust**
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   source $HOME/.cargo/env
+   ```
+
+3. **Node.js 18+**
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt install -y nodejs
+   ```
+
+4. **pnpm**
+   ```bash
+   npm install -g pnpm
+   ```
+
+### Linux (Fedora)
+
+1. **Build essentials and WebKit/GTK dependencies**
+   ```bash
+   sudo dnf install -y \
+     @development-tools \
+     openssl-devel \
+     webkit2gtk4.1-devel \
+     libappindicator-gtk3-devel \
+     librsvg2-devel \
+     patchelf
+   ```
+
+2. **Rust**
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   source $HOME/.cargo/env
+   ```
+
+3. **Node.js 18+**
+   ```bash
+   sudo dnf install -y nodejs
+   ```
+
+4. **pnpm**
+   ```bash
+   npm install -g pnpm
+   ```
+
+### Windows
+
+1. **Visual Studio Build Tools**
+   - Download [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+   - Run installer and select **"Desktop development with C++"** workload
+   - Restart your terminal after installation
+
+2. **Rust**
+   - Download and run [rustup-init.exe](https://rustup.rs/)
+   - Follow prompts (default options work)
+   - Restart your terminal
+
+3. **Node.js 18+**
+   - Download and install from [nodejs.org](https://nodejs.org/)
+
+4. **pnpm**
+   ```powershell
+   npm install -g pnpm
+   ```
 
 ## Building the App
 
-### Command Line (Recommended)
+### Development Mode
 
-No Xcode project needed - just use Swift Package Manager:
-
-```bash
-cd macos-app
-swift build
-swift run ClaudeCodeMonitor
-```
-
-For a release build:
+Run with hot-reload for development:
 
 ```bash
-swift build -c release
+cd tauri-app
+pnpm install
+pnpm tauri dev
 ```
 
-The binary will be at `.build/release/ClaudeCodeMonitor`.
+### Production Build
 
-### Using the Build Script
-
-A convenience script is provided to create distributable archives:
+Build release artifacts:
 
 ```bash
-cd macos-app
-./scripts/build-app.sh
+cd tauri-app
+pnpm install
+pnpm tauri build
 ```
 
-This creates:
-- `ClaudeCodeMonitor.zip` - ZIP archive for distribution
-- `ClaudeCodeMonitor.dmg` - DMG installer (if `create-dmg` is installed)
+### Build Outputs
 
-The script automatically:
-- Builds a release binary
-- Creates a proper app bundle with Info.plist
-- Bundles the Sparkle.framework for auto-updates
-- Signs the app if `DEVELOPER_ID` is set (see below)
-- Creates ZIP and DMG archives
-- Cleans up the intermediate .app bundle
+Build artifacts are created in `tauri-app/src-tauri/target/release/bundle/`:
 
-#### Optional: Install create-dmg
+| Platform | Output Path | Formats |
+|----------|-------------|---------|
+| macOS | `bundle/dmg/` | `.dmg` |
+| Windows | `bundle/nsis/` | `.exe` installer |
+| Windows | `bundle/msi/` | `.msi` installer |
+| Linux | `bundle/deb/` | `.deb` (Debian/Ubuntu) |
+| Linux | `bundle/rpm/` | `.rpm` (Fedora/RHEL) |
+| Linux | `bundle/appimage/` | `.AppImage` (Universal) |
 
-For DMG creation with a nice drag-to-Applications layout:
+### Cross-Compilation (macOS)
+
+Build for both Intel and Apple Silicon on macOS:
 
 ```bash
-brew install create-dmg
+# Add targets
+rustup target add aarch64-apple-darwin
+rustup target add x86_64-apple-darwin
+
+# Build for Apple Silicon
+pnpm tauri build --target aarch64-apple-darwin
+
+# Build for Intel
+pnpm tauri build --target x86_64-apple-darwin
 ```
 
-#### Optional: Code Signing
+## Validation
 
-To sign the app with your Developer ID:
+### Type Checking
 
 ```bash
-export DEVELOPER_ID="Developer ID Application: Your Name (TEAMID)"
-./scripts/build-app.sh
+cd tauri-app
+pnpm check
 ```
 
-If `DEVELOPER_ID` is not set, the script skips signing (useful for local testing).
-
-## Running Tests
+### Rust Checks
 
 ```bash
-cd macos-app
-swift test
+cd tauri-app/src-tauri
+cargo check
+cargo clippy
 ```
 
-The test suite includes:
-- **PrometheusClientTests**: Query builder validation
-- **PrometheusDecodingTests**: API response decoding
-- **MetricNormalizationTests**: Metric name/label normalization
-
-## Architecture
+## Project Structure
 
 ```
-macos-app/
-├── ClaudeCodeMonitor/
-│   └── Sources/
-│       ├── App/                    # App entry point
-│       ├── Models/                 # Data models
-│       │   ├── PrometheusModels.swift   # API response types
-│       │   └── ClaudeCodeMetrics.swift  # Domain models
-│       ├── Services/               # Business logic
-│       │   ├── PrometheusClient.swift   # HTTP client
-│       │   ├── MetricsService.swift     # Data aggregation
-│       │   └── SettingsManager.swift    # App settings
-│       └── Views/                  # SwiftUI views
-│           ├── ContentView.swift
-│           ├── LiveDashboardView.swift
-│           ├── HistoricalDashboardView.swift
-│           ├── SmokeTestView.swift
-│           ├── SettingsView.swift
-│           └── MenuBarView.swift
-├── ClaudeCodeMonitorTests/         # Unit tests
-├── Package.swift                   # SPM manifest
-└── scripts/
-    └── build-app.sh                # Build script
+tauri-app/
+├── src/                      # Svelte frontend
+│   ├── lib/
+│   │   ├── components/       # UI components
+│   │   ├── stores/           # Svelte stores
+│   │   └── types/            # TypeScript types
+│   ├── routes/               # SvelteKit pages
+│   └── app.css               # Global styles (Tailwind)
+├── src-tauri/                # Rust backend
+│   ├── src/
+│   │   ├── main.rs           # App entry point
+│   │   ├── lib.rs            # Library exports
+│   │   ├── prometheus.rs     # Prometheus HTTP client
+│   │   ├── metrics.rs        # Data models
+│   │   └── commands.rs       # Tauri IPC commands
+│   ├── Cargo.toml            # Rust dependencies
+│   ├── tauri.conf.json       # Tauri configuration
+│   └── icons/                # App icons
+├── package.json              # Node.js dependencies
+├── tailwind.config.js        # Tailwind CSS config
+├── svelte.config.js          # SvelteKit config
+└── vite.config.js            # Vite bundler config
 ```
 
-## Auto-Updates (Sparkle)
+## CI/CD Pipeline
 
-The app includes [Sparkle](https://sparkle-project.org/) for automatic update checking. The build script automatically bundles Sparkle.framework.
+The project uses GitHub Actions for automated builds. See `.github/workflows/release.yml`.
 
-### Configuration
+### Release Process
 
-The app is configured to check for updates from:
-- Feed URL: `https://raw.githubusercontent.com/cragr/ClaudeCodeMonitor/main/appcast.xml`
-
-### Creating a Release with Updates
-
-#### Prerequisites (one-time setup)
-
-1. Generate Sparkle EdDSA keys (stored in Keychain):
+1. Tag a new version:
    ```bash
-   # Download Sparkle tools
-   curl -L -o /tmp/Sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.5.0/Sparkle-2.5.0.tar.xz
-   cd /tmp && tar -xf Sparkle.tar.xz
-
-   # Generate keys (saves to Keychain, outputs public key)
-   /tmp/bin/generate_keys
+   git tag v0.6.0
+   git push origin v0.6.0
    ```
 
-2. Update `SUPublicEDKey` in `build-app.sh` Info.plist with the public key output
+2. GitHub Actions builds for all platforms:
+   - macOS (aarch64, x86_64)
+   - Windows (x86_64)
+   - Linux (x86_64)
 
-3. Create an app-specific password at https://appleid.apple.com for notarization
+3. Artifacts are uploaded to a draft release
 
-#### Release Workflow
+4. Edit the release notes and publish
 
-```bash
-cd macos-app
+### Build Matrix
 
-# 1. Build and sign the app
-export DEVELOPER_ID="Developer ID Application: Your Name (TEAM_ID)"
-./scripts/build-app.sh
+| Platform | Runner | Target |
+|----------|--------|--------|
+| macOS (ARM) | `macos-latest` | `aarch64-apple-darwin` |
+| macOS (Intel) | `macos-latest` | `x86_64-apple-darwin` |
+| Linux | `ubuntu-22.04` | `x86_64-unknown-linux-gnu` |
+| Windows | `windows-latest` | `x86_64-pc-windows-msvc` |
 
-# 2. Notarize the DMG with Apple
-xcrun notarytool submit ClaudeCodeMonitor.dmg \
-  --apple-id "your@email.com" \
-  --team-id "TEAM_ID" \
-  --password "your-app-specific-password" \
-  --wait
+## Code Signing
 
-# 3. Staple the notarization ticket to the DMG
-xcrun stapler staple ClaudeCodeMonitor.dmg
+### macOS
 
-# 4. Generate Sparkle EdDSA signature
-/tmp/bin/sign_update ClaudeCodeMonitor.dmg
-# Output: sparkle:edSignature="..." length="..."
+macOS builds are signed and notarized via GitHub Actions using these secrets:
 
-# 5. Update appcast.xml with new version entry:
-#    - sparkle:version (build number)
-#    - sparkle:shortVersionString (display version)
-#    - sparkle:edSignature (from step 4)
-#    - length (from step 4)
-#    - enclosure url
+- `APPLE_CERTIFICATE` - Base64-encoded .p12 certificate
+- `APPLE_CERTIFICATE_PASSWORD` - Certificate password
+- `APPLE_SIGNING_IDENTITY` - Developer ID identity string
+- `APPLE_ID` - Apple ID email
+- `APPLE_PASSWORD` - App-specific password
+- `APPLE_TEAM_ID` - Team ID
 
-# 6. Create GitHub release and upload artifacts
-gh release create vX.Y.Z --title "vX.Y.Z - Release Title" --notes "Release notes..."
-gh release upload vX.Y.Z ClaudeCodeMonitor.dmg ClaudeCodeMonitor.zip
+### Windows
 
-# 7. Commit and push appcast.xml
-git add appcast.xml
-git commit -m "chore: Add vX.Y.Z to appcast.xml"
-git push
+Windows code signing requires a certificate (DigiCert, Sectigo, etc.). Configure via:
+
+- `WINDOWS_CERTIFICATE` - Base64-encoded .pfx certificate
+- `WINDOWS_CERTIFICATE_PASSWORD` - Certificate password
+
+### Auto-Updates
+
+The Tauri updater is configured in `tauri.conf.json`:
+
+```json
+{
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/cragr/ClaudeCodeMonitor/releases/latest/download/latest.json"
+      ],
+      "pubkey": "..."
+    }
+  }
+}
 ```
 
-#### Updating an Existing Release
+The `latest.json` manifest is auto-generated by the tauri-action GitHub Action.
+
+## Troubleshooting
+
+### "error: linker `cc` not found" (Linux)
+
+Install build essentials:
 
 ```bash
-# Re-upload artifacts (after rebuilding)
-gh release upload vX.Y.Z ClaudeCodeMonitor.dmg ClaudeCodeMonitor.zip --clobber
-
-# Update appcast.xml signature/length and push
-git add appcast.xml
-git commit -m "chore: Update appcast signature for vX.Y.Z"
-git push
+sudo apt install -y build-essential  # Debian/Ubuntu
+sudo dnf install -y @development-tools  # Fedora
 ```
 
-## Distributing the App
+### "WebKit/GTK not found" (Linux)
 
-### Quick Distribution (No Developer Account)
-
-For sharing with trusted users without an Apple Developer account:
-
-1. Build using the script:
-   ```bash
-   cd macos-app
-   ./scripts/build-app.sh
-   ```
-
-2. Share the `ClaudeCodeMonitor.zip` file
-
-3. Recipients should:
-   - Unzip and move `ClaudeCodeMonitor.app` to `/Applications`
-   - Remove the quarantine attribute (required for unsigned apps):
-     ```bash
-     xattr -cr /Applications/ClaudeCodeMonitor.app
-     ```
-   - Launch the app from Applications
-
-### Create a DMG Installer
-
-The build script automatically creates a DMG if `create-dmg` is installed:
+Install WebKit development packages:
 
 ```bash
-brew install create-dmg
-./scripts/build-app.sh
+sudo apt install -y libwebkit2gtk-4.1-dev  # Debian/Ubuntu
+sudo dnf install -y webkit2gtk4.1-devel     # Fedora
 ```
 
-For manual DMG creation using hdiutil:
+### "LINK : fatal error" (Windows)
+
+Ensure Visual Studio Build Tools are installed with the C++ workload. Try running from "Developer PowerShell for VS".
+
+### "xcrun: error: invalid active developer path" (macOS)
+
+Install Xcode Command Line Tools:
 
 ```bash
-# Create a folder with the app and Applications alias
-mkdir -p dmg-contents
-cp -R ClaudeCodeMonitor.app dmg-contents/
-ln -s /Applications dmg-contents/Applications
-
-# Create DMG
-hdiutil create -volname "Claude Code Monitor" \
-  -srcfolder dmg-contents \
-  -ov -format UDZO \
-  ClaudeCodeMonitor.dmg
+xcode-select --install
 ```
 
-## Code Signing and Notarization
+### Rust version issues
 
-For distribution to other users (outside App Store), Apple recommends code signing and notarization.
-
-### Sign with Developer ID
-
-Requires an Apple Developer account ($99/year).
-
-**Using the build script (recommended):**
+Update Rust to the latest stable:
 
 ```bash
-export DEVELOPER_ID="Developer ID Application: Your Name (TEAM_ID)"
-./scripts/build-app.sh
+rustup update stable
 ```
 
-**Manual signing:**
+## Development Tips
 
-```bash
-codesign --deep --force --verify --verbose \
-  --sign "Developer ID Application: Your Name (TEAM_ID)" \
-  ClaudeCodeMonitor.app
+### Hot Reload
+
+`pnpm tauri dev` provides hot-reload for the Svelte frontend. Rust backend changes require a restart.
+
+### Debugging Rust
+
+Add logging to Rust code:
+
+```rust
+println!("Debug: {:?}", value);
 ```
 
-### Notarize the App
+View output in the terminal running `pnpm tauri dev`.
 
-```bash
-# Create a ZIP for notarization
-ditto -c -k --keepParent ClaudeCodeMonitor.app ClaudeCodeMonitor.zip
+### DevTools
 
-# Submit for notarization
-xcrun notarytool submit ClaudeCodeMonitor.zip \
-  --apple-id "your@email.com" \
-  --team-id "TEAM_ID" \
-  --password "app-specific-password" \
-  --wait
+Press `F12` or `Cmd+Option+I` (macOS) / `Ctrl+Shift+I` (Windows/Linux) to open browser DevTools in the app window.
 
-# Staple the ticket
-xcrun stapler staple ClaudeCodeMonitor.app
-```
+## See Also
 
-Without notarization, users will see Gatekeeper warnings and need to right-click → Open to bypass.
+- [Architecture](docs/architecture.md) - Technical overview
+- [Troubleshooting](docs/troubleshooting.md) - More solutions
