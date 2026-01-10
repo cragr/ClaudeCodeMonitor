@@ -5,6 +5,7 @@
 
   export let activeView: string;
   export let onNavigate: (view: string) => void;
+  export let onOpenSettings: () => void = () => {};
 
   let elapsedSeconds = 0;
   let interval: ReturnType<typeof setInterval>;
@@ -218,11 +219,23 @@
 
   <!-- Status Footer -->
   <div class="px-3 py-2 border-t border-border-secondary">
-    <div class="flex items-center gap-1.5 mb-0.5">
-      <div class="w-2 h-2 rounded-full {$isConnected ? 'bg-accent-green' : 'bg-accent-red'}"></div>
-      <span class="text-sm font-bold {$isConnected ? 'text-accent-green' : 'text-accent-red'}">
-        {$isConnected ? 'CONNECTED' : 'DISCONNECTED'}
-      </span>
+    <div class="flex items-center justify-between mb-0.5">
+      <div class="flex items-center gap-1.5">
+        <div class="w-2 h-2 rounded-full {$isConnected ? 'bg-accent-green' : 'bg-accent-red'}"></div>
+        <span class="text-sm font-bold {$isConnected ? 'text-accent-green' : 'text-accent-red'}">
+          {$isConnected ? 'CONNECTED' : 'DISCONNECTED'}
+        </span>
+      </div>
+      <button
+        on:click={onOpenSettings}
+        class="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+        title="Settings (⌘,)"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
     </div>
     <div class="flex items-center gap-1 text-xs text-text-muted">
       <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

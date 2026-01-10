@@ -34,7 +34,7 @@
 </script>
 
 <div class="flex h-screen bg-bg-primary">
-  <Sidebar {activeView} onNavigate={handleNavigate} />
+  <Sidebar {activeView} onNavigate={handleNavigate} onOpenSettings={() => (showSettings = true)} />
 
   <main class="flex-1 overflow-y-auto p-4">
     {#if activeView === 'summary'}
