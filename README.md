@@ -124,6 +124,24 @@ Go to [Releases](https://github.com/cragr/ClaudeCodeMonitor/releases) and downlo
 - Check Prometheus targets: http://localhost:9090/targets
 - See [Troubleshooting](docs/troubleshooting.md) for common issues
 
+### 6. Configure Autostart (Recommended)
+
+To avoid manually starting the monitoring stack after each reboot, configure Podman Desktop to start automatically:
+
+#### Enable Podman Desktop Autostart
+
+1. Open **Podman Desktop**
+2. Go to **Settings** (gear icon) → **Preferences**
+3. Enable **"Start Podman Desktop on login"**
+
+#### Enable Podman Engine Autostart
+
+1. In Podman Desktop, go to **Settings** → **Resources**
+2. Find your Podman machine (e.g., `podman-machine-default`)
+3. Enable **"Start engine when Podman Desktop starts"**
+
+With both settings enabled, the monitoring stack will be available automatically after login (containers use `restart: always` in compose.yaml).
+
 ## Documentation
 
 | Document | Description |
