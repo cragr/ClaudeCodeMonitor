@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "claude-code-monitor"
-version = "0.5.9"
+version = "0.6.1"
 dependencies = [
  "chrono",
  "dirs 5.0.1",
