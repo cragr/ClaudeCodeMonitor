@@ -50,7 +50,9 @@ See [Monitoring Stack Setup](docs/monitoring-stack.md) for detailed instructions
 
 ### 3. Configure Environment Variables
 
-Add to your shell profile (`~/.zshrc`, `~/.bashrc`, or PowerShell `$PROFILE`):
+#### macOS / Linux
+
+Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
 export CLAUDE_CODE_ENABLE_TELEMETRY=1
@@ -66,7 +68,27 @@ source ~/.zshrc  # or ~/.bashrc
 echo $CLAUDE_CODE_ENABLE_TELEMETRY  # Should output: 1
 ```
 
-See [Configuration](docs/configuration.md) for all platforms including PowerShell.
+#### Windows
+
+Add to your PowerShell profile (`$PROFILE`):
+
+```powershell
+$env:CLAUDE_CODE_ENABLE_TELEMETRY = "1"
+$env:OTEL_METRICS_EXPORTER = "otlp"
+$env:OTEL_EXPORTER_OTLP_PROTOCOL = "grpc"
+$env:OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4317"
+```
+
+Or set system-wide via **Settings → System → About → Advanced system settings → Environment Variables**.
+
+Reload PowerShell and verify:
+
+```powershell
+. $PROFILE
+$env:CLAUDE_CODE_ENABLE_TELEMETRY  # Should output: 1
+```
+
+See [Configuration](docs/configuration.md) for more details.
 
 ### 4. Install the App
 
