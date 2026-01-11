@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
+  import { openUrl } from '@tauri-apps/plugin-opener';
   import { settings } from '$lib/stores/settings';
   import { isConnected } from '$lib/stores';
 
@@ -20,30 +21,6 @@
 
   let discoveredMetrics: string[] = [];
   let isRunning = false;
-
-  const setupSteps = [
-    {
-      title: 'Start the monitoring stack',
-      commands: ['podman compose up -d'],
-    },
-    {
-      title: 'Enable Claude Code telemetry',
-      commands: [
-        'export CLAUDE_CODE_ENABLE_TELEMETRY=1',
-        'export OTEL_METRICS_EXPORTER=otlp',
-        'export OTEL_EXPORTER_OTLP_PROTOCOL=grpc',
-        'export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317',
-      ],
-    },
-    {
-      title: 'Use Claude Code normally',
-      commands: ['claude'],
-    },
-    {
-      title: 'Verify metrics in Prometheus',
-      commands: ['open http://localhost:9090/graph'],
-    },
-  ];
 
   async function runTests() {
     isRunning = true;
@@ -145,8 +122,8 @@
     navigator.clipboard.writeText(text);
   }
 
-  function copyAllCommands(commands: string[]) {
-    navigator.clipboard.writeText(commands.join('\n'));
+  function openExternal(url: string) {
+    openUrl(url);
   }
 </script>
 
@@ -257,38 +234,48 @@
     </div>
   {/if}
 
-  <!-- Setup Guide -->
+  <!-- Documentation Links -->
   <div class="bg-bg-card rounded-lg p-4">
     <div class="flex items-center gap-3 mb-4">
       <div class="h-px flex-1 bg-border-secondary"></div>
-      <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Setup Guide</span>
+      <span class="text-xs font-medium text-text-muted uppercase tracking-wider">Documentation</span>
       <div class="h-px flex-1 bg-border-secondary"></div>
     </div>
-    <div class="space-y-4">
-      {#each setupSteps as step, i}
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-6 h-6 rounded-full bg-yellow flex items-center justify-center text-crust text-sm font-bold flex-shrink-0">
-              {i + 1}
-            </div>
-            <span class="text-sm font-medium text-text-primary">{step.title}</span>
-          </div>
-          <div class="ml-9">
-            <div class="flex items-start justify-between bg-bg-primary rounded-lg px-4 py-3 group">
-              <code class="text-sm font-mono font-bold text-text-primary whitespace-pre-wrap">{step.commands.join('\n')}</code>
-              <button
-                class="p-1 text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-2"
-                on:click={() => copyAllCommands(step.commands)}
-                title="Copy to clipboard"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-            </div>
-          </div>
+    <div class="grid grid-cols-2 gap-3">
+      <button
+        class="flex items-center gap-3 px-4 py-3 bg-bg-primary rounded-lg group hover:bg-bg-card-hover transition-all text-left"
+        on:click={() => openExternal('https://github.com/cragr/ClaudeCodeMonitor?tab=readme-ov-file#quickstart')}
+      >
+        <div class="w-10 h-10 rounded-lg bg-yellow/20 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow/30 transition-colors">
+          <svg class="w-5 h-5 text-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
         </div>
-      {/each}
+        <div class="min-w-0">
+          <div class="text-sm font-semibold text-text-primary group-hover:text-yellow transition-colors">Quickstart Guide</div>
+          <div class="text-xs text-text-muted">Get up and running in minutes</div>
+        </div>
+        <svg class="w-4 h-4 text-text-muted group-hover:text-yellow ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </button>
+      <button
+        class="flex items-center gap-3 px-4 py-3 bg-bg-primary rounded-lg group hover:bg-bg-card-hover transition-all text-left"
+        on:click={() => openExternal('https://github.com/cragr/ClaudeCodeMonitor/blob/main/docs/troubleshooting.md')}
+      >
+        <div class="w-10 h-10 rounded-lg bg-yellow/20 flex items-center justify-center flex-shrink-0 group-hover:bg-yellow/30 transition-colors">
+          <svg class="w-5 h-5 text-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="text-sm font-semibold text-text-primary group-hover:text-yellow transition-colors">Troubleshooting</div>
+          <div class="text-xs text-text-muted">Common issues and solutions</div>
+        </div>
+        <svg class="w-4 h-4 text-text-muted group-hover:text-yellow ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </button>
     </div>
   </div>
 </div>

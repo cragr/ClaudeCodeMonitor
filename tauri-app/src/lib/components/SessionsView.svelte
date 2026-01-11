@@ -104,7 +104,7 @@
 </script>
 
 <div>
-  <ViewHeader category="sessions" title="Session Stats">
+  <ViewHeader category="sessions" title="Session History">
     <svelte:fragment slot="actions">
       <TimeRangePicker value={$timeRangeStore} onChange={handleTimeRangeChange} />
     </svelte:fragment>

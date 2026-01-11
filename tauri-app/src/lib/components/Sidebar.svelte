@@ -48,7 +48,7 @@
   ];
 
   const claudeCacheItems = [
-    { id: 'sessions', label: 'Session Stats', icon: 'terminal', description: 'Session cost explorer and analysis' },
+    { id: 'sessions', label: 'Session History', icon: 'terminal', description: 'Session cost explorer and analysis' },
     { id: 'stats-cache', label: 'Stats Cache', icon: 'database', description: 'Local Claude Code usage statistics' },
   ];
 
@@ -142,10 +142,10 @@
       {/each}
     </div>
 
-    <!-- Claude Cache (Local) Section -->
+    <!-- User Config Folder Section -->
     <div class="mb-3">
       <div class="px-2 py-1.5 text-xs font-medium text-text-muted uppercase tracking-wider">
-        Claude Cache (Local)
+        User Config Folder
       </div>
       {#each claudeCacheItems as item}
         {@const colors = tabColors[item.id]}
