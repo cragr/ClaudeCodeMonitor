@@ -132,7 +132,29 @@ To avoid manually starting the monitoring stack after each reboot, configure Pod
 2. Find your Podman machine (e.g., `podman-machine-default`)
 3. Enable **"Start engine when Podman Desktop starts"**
 
-With both settings enabled, the monitoring stack will be available automatically after login (containers use `restart: always` in compose.yaml).
+#### Enable Container Autostart
+
+Containers with `restart: always` (set in compose.yaml) need additional configuration to start automatically when the Podman engine starts.
+
+**macOS / Windows:**
+
+Open your terminal (bash or PowerShell) and connect to the Podman VM to enable the restart service:
+
+```bash
+podman machine ssh
+systemctl enable podman-restart.service
+exit
+```
+
+**Linux:**
+
+Enable lingering for your user to allow rootless containers to run automatically:
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+With all settings enabled, the monitoring stack will be available automatically after login.
 
 ## Documentation
 
