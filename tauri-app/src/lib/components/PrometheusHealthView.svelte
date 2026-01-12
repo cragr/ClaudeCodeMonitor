@@ -26,7 +26,18 @@
   let error: string | null = null;
   let refreshInterval: ReturnType<typeof setInterval>;
 
+  // Track previous URL to detect settings changes
+  let previousPrometheusUrl = '';
+
+  // Re-fetch when Prometheus URL changes (after initial load)
+  $: if ($settings.prometheusUrl && previousPrometheusUrl && $settings.prometheusUrl !== previousPrometheusUrl) {
+    previousPrometheusUrl = $settings.prometheusUrl;
+    fetchHealth();
+  }
+
   async function fetchHealth() {
+    // Update tracked URL on each fetch
+    previousPrometheusUrl = $settings.prometheusUrl;
     console.log('PrometheusHealthView: fetchHealth starting');
     loading = true;
     error = null;

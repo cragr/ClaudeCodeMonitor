@@ -14,7 +14,18 @@
   type SortOption = 'cost_high' | 'cost_low' | 'tokens_high' | 'duration_high';
   let sortOption: SortOption = 'cost_high';
 
+  // Track previous URL to detect settings changes
+  let previousPrometheusUrl = '';
+
+  // Re-fetch when Prometheus URL changes (after initial load)
+  $: if ($settings.prometheusUrl && previousPrometheusUrl && $settings.prometheusUrl !== previousPrometheusUrl) {
+    previousPrometheusUrl = $settings.prometheusUrl;
+    fetchSessions();
+  }
+
   async function fetchSessions() {
+    // Update tracked URL on each fetch
+    previousPrometheusUrl = $settings.prometheusUrl;
     loading = true;
     error = null;
     try {

@@ -22,6 +22,26 @@
   let discoveredMetrics: string[] = [];
   let isRunning = false;
 
+  // Track previous URL to detect settings changes
+  let previousPrometheusUrl = $settings.prometheusUrl;
+
+  // Reset tests when Prometheus URL changes (user needs to re-run with new URL)
+  $: if ($settings.prometheusUrl && previousPrometheusUrl && $settings.prometheusUrl !== previousPrometheusUrl) {
+    previousPrometheusUrl = $settings.prometheusUrl;
+    tests = tests.map(t => ({ ...t, status: 'pending' as const, message: undefined, time: undefined, subtitle: getDefaultSubtitle(t.name) }));
+    discoveredMetrics = [];
+  }
+
+  function getDefaultSubtitle(name: string): string {
+    const subtitles: Record<string, string> = {
+      'Prometheus Connection': 'Checking connectivity...',
+      'Prometheus API': 'Testing API endpoints...',
+      'Claude Code Metrics': 'Discovering metrics...',
+      'Query Execution': 'Testing PromQL queries...',
+    };
+    return subtitles[name] || '';
+  }
+
   async function runTests() {
     isRunning = true;
     tests = tests.map(t => ({ ...t, status: 'pending' as const, message: undefined, time: undefined }));

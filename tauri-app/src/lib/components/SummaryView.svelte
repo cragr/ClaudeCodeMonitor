@@ -36,7 +36,18 @@
 
   Chart.register(...registerables);
 
+  // Track previous URL to detect settings changes
+  let previousPrometheusUrl = '';
+
+  // Re-fetch when Prometheus URL changes (after initial load)
+  $: if ($settings.prometheusUrl && previousPrometheusUrl && $settings.prometheusUrl !== previousPrometheusUrl) {
+    previousPrometheusUrl = $settings.prometheusUrl;
+    fetchMetrics();
+  }
+
   async function fetchMetrics() {
+    // Update tracked URL on each fetch
+    previousPrometheusUrl = $settings.prometheusUrl;
     loading = true;
     error = null;
     try {
