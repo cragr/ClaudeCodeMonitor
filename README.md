@@ -42,6 +42,20 @@ podman compose up -d
 
 **Verify:** Open http://localhost:9090 to see Prometheus.
 
+#### Changing Default Ports (Optional)
+
+If the default ports (4317, 4318, 8889, 9090) conflict with other services, run the configuration script:
+
+```bash
+# macOS / Linux
+./scripts/configure-ports.sh
+
+# Windows
+.\scripts\configure-ports.ps1
+```
+
+The script prompts for new port numbers, validates them, and restarts the stack.
+
 ### 3. Configure Environment Variables
 
 #### macOS / Linux
