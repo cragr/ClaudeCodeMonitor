@@ -54,7 +54,7 @@ If the default ports (4317, 4318, 8889, 9090) conflict with other services, run 
 .\scripts\configure-ports.ps1
 ```
 
-The script prompts for new port numbers, validates them, and restarts the stack.
+The script prompts for new port numbers, validates them, and restarts the stack. If you change the Prometheus port (default 9090), update the app settings: **Settings → Prometheus URL**.
 
 ### 3. Configure Environment Variables
 

@@ -699,8 +699,10 @@ function Write-FinalSummary {
 
     # Only show note if Prometheus port changed
     if ($script:CurrentPorts["prom"] -ne $script:NewPorts["prom"]) {
-        Write-Host "Note: Update your Claude Code Monitor app settings to use:"
-        Write-Host "  http://localhost:$($script:NewPorts['prom'])"
+        Write-Host "Important: Update your Claude Code Monitor app to use the new port:"
+        Write-Host "  1. Open the app and click the gear icon (Settings)"
+        Write-Host "  2. Change 'Prometheus URL' to: http://localhost:$($script:NewPorts['prom'])"
+        Write-Host "  3. Click Save"
     }
 }
 

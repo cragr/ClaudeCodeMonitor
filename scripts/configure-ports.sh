@@ -636,8 +636,10 @@ print_final_summary() {
 
     # Only show note if Prometheus port changed
     if [[ "${CURRENT_PORTS[prom]}" != "${NEW_PORTS[prom]}" ]]; then
-        echo "Note: Update your Claude Code Monitor app settings to use:"
-        echo "  http://localhost:${NEW_PORTS[prom]}"
+        echo "Important: Update your Claude Code Monitor app to use the new port:"
+        echo "  1. Open the app and click the gear icon (Settings)"
+        echo "  2. Change 'Prometheus URL' to: http://localhost:${NEW_PORTS[prom]}"
+        echo "  3. Click Save"
     fi
 }
 
