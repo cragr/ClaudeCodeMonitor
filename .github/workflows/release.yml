@@ -51,13 +51,12 @@ jobs:
           # Install create-dmg for DMG bundling
           brew install create-dmg || true
 
-      - name: Install Linux dependencies (CentOS/RHEL)
+      - name: Install Linux dependencies (Ubuntu)
         if: contains(matrix.platform, 'Linux')
         run: |
-          sudo dnf install -y epel-release
-          sudo dnf groupinstall -y "Development Tools"
-          sudo dnf install -y gcc gcc-c++ make
-          sudo dnf install -y webkit2gtk3-devel libappindicator-gtk3 librsvg2-devel patchelf xdg-utils openssl-devel
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils libssl-dev
 
       - name: Install Windows dependencies
         if: contains(matrix.platform, 'Windows')
