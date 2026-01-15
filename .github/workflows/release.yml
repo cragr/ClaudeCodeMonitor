@@ -43,11 +43,34 @@ jobs:
         with:
           targets: ${{ matrix.rust_targets }}
 
-      - name: Install Linux dependencies
+      - name: Install macOS dependencies
+        if: contains(matrix.platform, 'macOS')
+        run: |
+          # Ensure Xcode CLI tools are available
+          xcode-select --install 2>/dev/null || true
+          # Install create-dmg for DMG bundling
+          brew install create-dmg || true
+
+      - name: Install Linux dependencies (CentOS/RHEL)
         if: contains(matrix.platform, 'Linux')
         run: |
-          sudo apt-get update 
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+          sudo dnf install -y epel-release
+          sudo dnf groupinstall -y "Development Tools"
+          sudo dnf install -y gcc gcc-c++ make
+          sudo dnf install -y webkit2gtk3-devel libappindicator-gtk3 librsvg2-devel patchelf xdg-utils openssl-devel
+
+      - name: Install Windows dependencies
+        if: contains(matrix.platform, 'Windows')
+        shell: pwsh
+        run: |
+          # Check if MSVC is installed
+          if (-not (Test-Path "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC")) {
+            Write-Host "Installing Visual Studio Build Tools..."
+            Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile "$env:TEMP\vs_buildtools.exe"
+            Start-Process -FilePath "$env:TEMP\vs_buildtools.exe" -ArgumentList "--quiet", "--wait", "--norestart", "--nocache", "--add", "Microsoft.VisualStudio.Workload.VCTools", "--includeRecommended" -Wait
+          } else {
+            Write-Host "Visual Studio Build Tools already installed"
+          }
 
       - name: Install frontend dependencies
         working-directory: tauri-app
