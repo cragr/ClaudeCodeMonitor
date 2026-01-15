@@ -51,12 +51,21 @@ jobs:
 
       - name: Install Linux dependencies (Ubuntu)
         if: contains(matrix.platform, 'Linux')
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential fuse libfuse2
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils libssl-dev
+          # Clear any cached Tauri bundler tools and download fresh
+          rm -rf ~/.cache/tauri
+          # Pre-download and extract linuxdeploy tools
+          mkdir -p ~/.cache/tauri
+          cd ~/.cache/tauri
+          curl -L -o linuxdeploy.AppImage https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage
+          ./linuxdeploy.AppImage --appimage-extract
+          mv squashfs-root linuxdeploy
+          ln -sf ~/.cache/tauri/linuxdeploy/AppRun ~/.local/bin/linuxdeploy
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Windows dependencies
         if: contains(matrix.platform, 'Windows')
