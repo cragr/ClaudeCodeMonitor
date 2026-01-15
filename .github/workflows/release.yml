@@ -21,7 +21,7 @@ jobs:
             args: ''
             rust_targets: ''
           - platform: [self-hosted, Linux, X64]
-            args: ''
+            args: '--bundles deb'
             rust_targets: ''
           - platform: [self-hosted, Windows, X64]
             args: ''
