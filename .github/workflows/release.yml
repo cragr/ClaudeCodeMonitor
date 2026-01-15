@@ -48,8 +48,6 @@ jobs:
         run: |
           # Ensure Xcode CLI tools are available
           xcode-select --install 2>/dev/null || true
-          # Install create-dmg for DMG bundling
-          brew install create-dmg || true
 
       - name: Install Linux dependencies (Ubuntu)
         if: contains(matrix.platform, 'Linux')
