@@ -23,7 +23,7 @@ jobs:
             args: '--target universal-apple-darwin'
             rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
           - platform: [self-hosted, Linux, X64]
-            args: '--verbose'
+            args: ''
             rust_targets: ''
           - platform: [self-hosted, Windows, X64]
             args: ''
