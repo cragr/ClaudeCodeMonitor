@@ -18,10 +18,10 @@ jobs:
       matrix:
         include:
           - platform: [self-hosted, macOS, X64]
-            args: ''
-            rust_targets: ''
+            args: '--target universal-apple-darwin'
+            rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
           - platform: [self-hosted, Linux, X64]
-            args: '--bundles deb'
+            args: ''
             rust_targets: ''
           - platform: [self-hosted, Windows, X64]
             args: ''
@@ -58,6 +58,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential fuse libfuse2 squashfs-tools
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils libssl-dev
+          # Load FUSE kernel module for AppImage support
+          sudo modprobe fuse || true
+          # Ensure user has access to FUSE
+          sudo chmod 666 /dev/fuse || true
           # Clear any cached Tauri bundler tools
           rm -rf ~/.cache/tauri
 
