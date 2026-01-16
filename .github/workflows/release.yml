@@ -13,6 +13,8 @@ jobs:
     env:
       # Allow AppImage tools to run without FUSE on Linux
       APPIMAGE_EXTRACT_AND_RUN: '1'
+      # Enable verbose error output
+      RUST_BACKTRACE: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -21,7 +23,7 @@ jobs:
             args: '--target universal-apple-darwin'
             rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
           - platform: [self-hosted, Linux, X64]
-            args: ''
+            args: '--verbose'
             rust_targets: ''
           - platform: [self-hosted, Windows, X64]
             args: ''
